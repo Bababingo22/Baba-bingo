@@ -9,3 +9,4 @@ gunicorn
 django-cors-headers
 daphne
 dj-database-url
+whitenoise[brotli]
