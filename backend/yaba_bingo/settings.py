@@ -11,6 +11,12 @@ DEBUG = os.environ.get("DEBUG", "false").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = ["*"]
 
+# INJECTED FOR PRODUCTION: Add the Render.com URL to the list of trusted origins
+# This is required to allow the admin login form to be submitted securely.
+CSRF_TRUSTED_ORIGINS = [
+    'https://baba-bingo-backend.onrender.com'
+]
+
 # Application definition
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -18,6 +24,9 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    # INJECTED FOR PRODUCTION: WhiteNoise for serving static files.
+    # It must come before 'django.contrib.staticfiles'.
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
@@ -29,6 +38,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # INJECTED FOR PRODUCTION: WhiteNoise middleware for serving static files.
+    # It should be placed directly after the SecurityMiddleware.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
