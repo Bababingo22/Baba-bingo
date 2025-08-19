@@ -57,15 +57,17 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for i in (0, 1, 2, 3, 4) %}
+                    {# CORRECTED LOOP: Loop through the numbers in the first column ('B') #}
+                    {# and use forloop.counter0 to get the index (0, 1, 2, 3, 4) #}
+                    {% for b_number in card.board.0 %}
                     <tr>
-                        <td>{{ card.board.0|list|getItem:i }}</td>
-                        <td>{{ card.board.1|list|getItem:i }}</td>
-                        <td {% if card.board.2|list|getItem:i == "FREE" %}class="free-space"{% endif %}>
-                            {{ card.board.2|list|getItem:i }}
+                        <td>{{ b_number }}</td>
+                        <td>{{ card.board.1|getItem:forloop.counter0 }}</td>
+                        <td {% if card.board.2|getItem:forloop.counter0 == "FREE" %}class="free-space"{% endif %}>
+                            {{ card.board.2|getItem:forloop.counter0 }}
                         </td>
-                        <td>{{ card.board.3|list|getItem:i }}</td>
-                        <td>{{ card.board.4|list|getItem:i }}</td>
+                        <td>{{ card.board.3|getItem:forloop.counter0 }}</td>
+                        <td>{{ card.board.4|getItem:forloop.counter0 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
