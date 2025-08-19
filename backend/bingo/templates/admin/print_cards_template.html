@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Printable Bingo Cards</title>
+    <style>
+        body { font-family: sans-serif; }
+        .page-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            padding: 1rem;
+        }
+        .card {
+            border: 2px solid #000;
+            padding: 8px;
+            border-radius: 8px;
+            page-break-inside: avoid;
+        }
+        .card-title { text-align: center; font-weight: bold; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            border: 1px solid #333;
+            text-align: center;
+            font-weight: bold;
+            height: 40px;
+            width: 20%;
+        }
+        th { background-color: #e0e0e0; }
+        .free-space { background-color: #c0c0c0; }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="page-container">
+        {% for card in cards %}
+        <div class="card">
+            <div class="card-title">Card #{{ card.card_number }}</div>
+            <table>
+                <thead>
+                    <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+                </thead>
+                <tbody>
+                    {% for i in (0, 1, 2, 3, 4) %}
+                    <tr>
+                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.0|list|getItem:i }}</td>
+                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.1|list|getItem:i }}</td>
+                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.2|list|getItem:i }}</td>
+                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.3|list|getItem:i }}</td>
+                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.4|list|getItem:i }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
