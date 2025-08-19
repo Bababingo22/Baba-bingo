@@ -26,7 +26,7 @@ class Transaction(models.Model):
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="transactions")
     timestamp = models.DateTimeField(default=timezone.now)
     type = models.CharField(max_length=32, choices=TRANSACTION_TYPES)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)  # positive or negative
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
     running_balance = models.DecimalField(max_digits=12, decimal_places=2)
     note = models.TextField(blank=True)
 
@@ -37,7 +37,6 @@ class Transaction(models.Model):
         return f"{self.agent.username} {self.type} {self.amount} at {self.timestamp}"
 
 def generate_single_board():
-    # Standard 75-ball bingo: B 1-15, I 16-30, N 31-45 (free center), G 46-60, O 61-75
     board = []
     ranges = [(1,15), (16,30), (31,45), (46,60), (61,75)]
     for col_idx, (a,b) in enumerate(ranges):
@@ -45,16 +44,26 @@ def generate_single_board():
         if col_idx == 2:
             nums[2] = "FREE"
         board.append(nums)
-    # transpose to rows: 5 rows of 5
     rows = [[board[col][row] for col in range(5)] for row in range(5)]
     return rows
 
+# --- NEW MODEL ---
+# This table will store your 100 permanent cards.
+class PermanentCard(models.Model):
+    card_number = models.PositiveSmallIntegerField(unique=True) # 1 through 100
+    board = models.JSONField() # The B-I-N-G-O data
+
+    def __str__(self):
+        return f"Permanent Card #{self.card_number}"
+
+# --- MODIFIED MODEL ---
 class GameRound(models.Model):
     STATUS_CHOICES = [("PENDING", "Pending"), ("ACTIVE", "Active"), ("ENDED", "Ended")]
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="game_rounds")
     created_at = models.DateTimeField(default=timezone.now)
-    boards = models.JSONField()  # list of 100 boards
-    active_board_ids = models.JSONField(default=list)  # list of active board indices
+    
+    active_card_numbers = models.JSONField(default=list) 
+    
     called_numbers = models.JSONField(default=list)
     total_calls = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="PENDING")
@@ -63,17 +72,6 @@ class GameRound(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def save(self, *args, **kwargs):
-        if not self.boards:
-            # generate 100 unique boards
-            boards = []
-            seen = set()
-            while len(boards) < 100:
-                board = generate_single_board()
-                key = json.dumps(board)
-                if key in seen:
-                    continue
-                seen.add(key)
-                boards.append(board)
-            self.boards = boards
-            self.active_board_ids = list(range(100))
+        if not self.pk: # Only on first save
+            self.active_card_numbers = list(range(1, 101))
         super().save(*args, **kwargs)
