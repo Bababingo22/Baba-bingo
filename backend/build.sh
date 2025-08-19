@@ -15,7 +15,3 @@ python manage.py migrate
 # Create superuser
 echo "Creating superuser..."
 python manage.py create_superuser_from_env
-
-# Generate the 100 permanent cards if they don't exist
-echo "Checking for permanent cards..."
-python manage.py generate_cards
