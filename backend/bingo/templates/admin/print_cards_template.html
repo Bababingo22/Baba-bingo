@@ -3,53 +3,74 @@
 <head>
     <title>Printable Bingo Cards</title>
     <style>
-        body { font-family: sans-serif; }
+        @media print {
+            @page {
+                size: A4;
+                margin: 0.5in;
+            }
+        }
+        body { font-family: Arial, sans-serif; }
         .page-container {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            padding: 1rem;
+            grid-template-columns: 1fr 1fr; /* 2 cards per row */
+            gap: 20px;
         }
         .card {
-            border: 2px solid #000;
+            border: 1px solid #777;
             padding: 8px;
             border-radius: 8px;
-            page-break-inside: avoid;
+            page-break-inside: avoid; /* Important for printing */
         }
-        .card-title { text-align: center; font-weight: bold; margin-bottom: 8px; }
+        .card-header { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 8px; }
+        .card-footer { text-align: right; font-size: 12px; margin-top: 8px; color: #555; }
         table { width: 100%; border-collapse: collapse; }
         th, td {
-            border: 1px solid #333;
             text-align: center;
             font-weight: bold;
-            height: 40px;
+            font-size: 20px;
+            height: 45px;
             width: 20%;
         }
-        th { background-color: #e0e0e0; }
-        .free-space { background-color: #c0c0c0; }
+        th { color: white; border: 1px solid black; }
+        td { border: 1px solid #ccc; }
+        .b-col { background-color: #4A90E2; } /* Blue */
+        .i-col { background-color: #D0021B; } /* Red */
+        .n-col { background-color: #F8E71C; color: #333; } /* Yellow */
+        .g-col { background-color: #7ED321; } /* Green */
+        .o-col { background-color: #50E3C2; } /* Teal/Light Blue */
+        .free-space { font-size: 16px; color: #D0021B; }
     </style>
 </head>
 <body onload="window.print()">
     <div class="page-container">
         {% for card in cards %}
         <div class="card">
-            <div class="card-title">Card #{{ card.card_number }}</div>
+            <div class="card-header">Yaba Bingo</div>
             <table>
                 <thead>
-                    <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+                    <tr>
+                        <th class="b-col">B</th>
+                        <th class="i-col">I</th>
+                        <th class="n-col">N</th>
+                        <th class="g-col">G</th>
+                        <th class="o-col">O</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% for i in (0, 1, 2, 3, 4) %}
                     <tr>
-                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.0|list|getItem:i }}</td>
-                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.1|list|getItem:i }}</td>
-                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.2|list|getItem:i }}</td>
-                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.3|list|getItem:i }}</td>
-                        <td {% if i == 2 %}class="free-space"{% endif %}>{{ card.board.4|list|getItem:i }}</td>
+                        <td>{{ card.board.0|list|getItem:i }}</td>
+                        <td>{{ card.board.1|list|getItem:i }}</td>
+                        <td {% if card.board.2|list|getItem:i == "FREE" %}class="free-space"{% endif %}>
+                            {{ card.board.2|list|getItem:i }}
+                        </td>
+                        <td>{{ card.board.3|list|getItem:i }}</td>
+                        <td>{{ card.board.4|list|getItem:i }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            <div class="card-footer">Card No. {{ card.card_number }}</div>
         </div>
         {% endfor %}
     </div>
