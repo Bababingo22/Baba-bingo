@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import User, Transaction, GameRound
+from django.shortcuts import render
+from django.http import HttpResponse
+from .models import User, Transaction, GameRound, PermanentCard
 from django.utils import timezone
 from decimal import Decimal
 
@@ -17,14 +19,12 @@ class UserAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        # If editing existing agent and operational_credit changed manually in admin, make Transaction record
         if change:
             old_obj = User.objects.get(pk=obj.pk)
             old_balance = old_obj.operational_credit
             new_balance = obj.operational_credit
             diff = (new_balance - old_balance)
             if diff != 0:
-                # create Transaction record
                 from .models import Transaction
                 Transaction.objects.create(
                     agent=obj,
@@ -45,4 +45,21 @@ class TransactionAdmin(admin.ModelAdmin):
 @admin.register(GameRound)
 class GameRoundAdmin(admin.ModelAdmin):
     list_display = ("id", "agent", "created_at", "status", "game_type", "total_calls")
-    readonly_fields = ("boards", "active_board_ids", "called_numbers")
+    readonly_fields = ("active_card_numbers", "called_numbers")
+
+@admin.register(PermanentCard)
+class PermanentCardAdmin(admin.ModelAdmin):
+    list_display = ('card_number',)
+    ordering = ('card_number',)
+    actions = ['print_cards_action']
+
+    def print_cards_action(self, request, queryset):
+        from django.template.defaulttags import register
+        @register.filter
+        def getItem(list, index):
+            return list[index]
+
+        context = {'cards': queryset.order_by('card_number')}
+        return render(request, 'admin/print_cards_template.html', context)
+
+    print_cards_action.short_description = "Print Selected Cards"
