@@ -4,14 +4,18 @@ set -o errexit
 
 pip install -r requirements.txt
 
-# Step 1: Migrate the 'bingo' app FIRST. This creates the custom user table.
+python manage.py collectstatic --no-input
+
+# Run migrations
 echo "Running bingo migrations..."
 python manage.py migrate bingo
-
-# Step 2: Migrate all other apps.
 echo "Running remaining migrations..."
 python manage.py migrate
 
-# Step 3: Create the superuser.
+# Create superuser
 echo "Creating superuser..."
 python manage.py create_superuser_from_env
+
+# Generate the 100 permanent cards if they don't exist
+echo "Checking for permanent cards..."
+python manage.py generate_cards
