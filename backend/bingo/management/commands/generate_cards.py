@@ -11,7 +11,6 @@ class Command(BaseCommand):
             return
 
         self.stdout.write('Generating 100 unique permanent bingo cards...')
-        
         cards = []
         seen_boards = set()
         
@@ -27,5 +26,4 @@ class Command(BaseCommand):
             cards.append(card)
 
         PermanentCard.objects.bulk_create(cards)
-        
         self.stdout.write(self.style.SUCCESS('Successfully generated and stored 100 permanent cards.'))
