@@ -1,23 +1,18 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.shortcuts import render
 from .models import User, Transaction, GameRound, PermanentCard
 from django.utils import timezone
 from decimal import Decimal
 
-# --- CORRECTED UserAdmin CLASS ---
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    # The BaseUserAdmin already has fieldsets for username, password, personal info, etc.
-    # We are adding our custom "Agent info" section to the existing ones.
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Agent info', {'fields': ('is_agent', 'operational_credit', 'commission_percentage')}),
     )
-    
-    # We add our custom fields to the list that shows all users.
     list_display = ('username', 'is_agent', 'operational_credit', 'commission_percentage', 'is_staff')
     list_filter = BaseUserAdmin.list_filter + ('is_agent',)
 
-    # Your custom save logic remains the same.
     def save_model(self, request, obj, form, change):
         if change:
             try:
@@ -35,11 +30,9 @@ class UserAdmin(BaseUserAdmin):
                         note=f"Manual adjustment by admin {request.user.username}"
                     )
             except User.DoesNotExist:
-                pass # This is a new user, so there's no old object to compare to.
+                pass
         super().save_model(request, obj, form, change)
 
-
-# --- These are the same as before ---
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
     list_display = ("agent", "timestamp", "type", "amount", "running_balance")
