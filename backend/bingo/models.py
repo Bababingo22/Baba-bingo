@@ -47,8 +47,7 @@ def generate_single_board():
     rows = [[board[col][row] for col in range(5)] for row in range(5)]
     return rows
 
-# --- NEW MODEL ---
-# This table will store your 100 permanent cards.
+# --- MODEL FOR PERMANENT CARDS ---
 class PermanentCard(models.Model):
     card_number = models.PositiveSmallIntegerField(unique=True) # 1 through 100
     board = models.JSONField() # The B-I-N-G-O data
@@ -56,14 +55,12 @@ class PermanentCard(models.Model):
     def __str__(self):
         return f"Permanent Card #{self.card_number}"
 
-# --- MODIFIED MODEL ---
+# --- GAME ROUND MODEL (uses permanent cards) ---
 class GameRound(models.Model):
     STATUS_CHOICES = [("PENDING", "Pending"), ("ACTIVE", "Active"), ("ENDED", "Ended")]
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="game_rounds")
     created_at = models.DateTimeField(default=timezone.now)
-    
-    active_card_numbers = models.JSONField(default=list) 
-    
+    active_card_numbers = models.JSONField(default=list)
     called_numbers = models.JSONField(default=list)
     total_calls = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="PENDING")
