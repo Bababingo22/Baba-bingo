@@ -3,7 +3,7 @@ import Login from './components/Login';
 import CreateGameWizard from './components/CreateGameWizard';
 import GameRunner from './components/GameRunner';
 import Sidebar from './components/Sidebar';
-import BoardView from './components/BoardView'; // Assuming you still want this feature
+// REMOVED: The broken import for the non-existent BoardView component
 import api, { setToken } from './services/api';
 
 export default function App() {
@@ -13,25 +13,37 @@ export default function App() {
   const [view, setView] = useState('create');
   const [currentGame, setCurrentGame] = useState(null);
   const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
-  
-  // --- NEW STATE to control the sidebar ---
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   useEffect(() => {
-    // ... (no changes here) ...
+    const t = localStorage.getItem('token');
+    if (t) {
+      setToken(t);
+      setTokenState(t);
+      api.get('/me/').then(r => { setUser(r.data); setAuthed(true); }).catch(() => {
+        localStorage.removeItem('token');
+        setToken(null);
+        setAuthed(false);
+      });
+    }
   }, []);
 
   function handleLogin({ token, user }) {
-    // ... (no changes here) ...
+    localStorage.setItem('token', token);
+    setToken(token);
+    setTokenState(token);
+    setUser(user);
+    setAuthed(true);
   }
 
   function handleGameCreated(game, settings) {
-    // ... (no changes here) ...
+    setCurrentGame(game);
+    setGameSettings(settings);
+    setView('runner');
   }
   
   const handleNav = (newView) => {
     setView(newView);
-    // When navigating, it's good practice to expand the sidebar to show the new selection
     setIsSidebarExpanded(true);
   };
 
@@ -45,7 +57,7 @@ export default function App() {
         user={user} 
         onNav={handleNav}
         isExpanded={isSidebarExpanded}
-        onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)} // Pass the toggle function
+        onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
       <div className="flex-1">
         {mainContent}
@@ -61,9 +73,7 @@ export default function App() {
     case 'runner':
       mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
       break;
-    case 'board':
-      mainContent = <BoardView />;
-      break;
+    // REMOVED: The 'board' case is no longer needed
     default:
       mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
   }
