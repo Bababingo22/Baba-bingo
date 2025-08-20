@@ -87,4 +87,16 @@ export default function Sidebar({ user, onNav, isExpanded, onToggle }) {
 
       {/* --- BOTTOM SECTION: Logout Button --- */}
       <div className="mt-auto">
-        {/* Show logout button 
+        {/* Show logout button only when expanded */}
+        {isExpanded && (
+          <button 
+            onClick={handleLogout} 
+            className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
+          >
+            Log Out
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
