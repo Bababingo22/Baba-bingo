@@ -1,6 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 
+// --- Helper function to get the B-I-N-G-O letter for a number ---
+const getBingoLetter = (number) => {
+  if (number >= 1 && number <= 15) return 'B';
+  if (number >= 16 && number <= 30) return 'I';
+  if (number >= 31 && number <= 45) return 'N';
+  if (number >= 46 && number <= 60) return 'G';
+  if (number >= 61 && number <= 75) return 'O';
+  return '';
+};
+
+// --- Sub-component: The Pop-up Modal for Checking a Card ---
 const CardCheckModal = ({ cardData, calledNumbers, onClose }) => {
   if (!cardData) return null;
   const headers = ['B', 'I', 'N', 'G', 'O'];
@@ -9,7 +20,7 @@ const CardCheckModal = ({ cardData, calledNumbers, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-auto max-w-md">
-        <h2 className="text-3xl font-bold text-center mb-4">Card #{cardData.card_number}</h2>
+        <h2 className="text-3xl font-bold text-center mb-4 text-white">Card #{cardData.card_number}</h2>
         <table className="w-full border-separate border-spacing-1">
           <thead>
             <tr>
@@ -39,6 +50,7 @@ const CardCheckModal = ({ cardData, calledNumbers, onClose }) => {
   );
 };
 
+// --- Sub-component: The Main 1-75 Number Grid ---
 const NumberGrid = ({ calledNumbers }) => {
   const grid = Array.from({ length: 75 }, (_, i) => i + 1);
   const headers = ['B', 'I', 'N', 'G', 'O'];
@@ -60,29 +72,38 @@ const NumberGrid = ({ calledNumbers }) => {
   );
 };
 
+// --- Main GameRunner Component ---
 export default function GameRunner({ game, token, callSpeed, audioLanguage }) {
   const [socket, setSocket] = useState(null);
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
-  const [currentNumber, setCurrentNumber] = useState(null);
   const [nextNumber, setNextNumber] = useState(null);
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [cardDataForModal, setCardDataForModal] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const intervalRef = useRef(null);
+  const [currentNumber, setCurrentNumber] = useState(null);
+  const [callHistory, setCallHistory] = useState([]);
 
   useEffect(() => {
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}/${apiHost}/ws/game/${game.id}/?token=${token}`;
     const s = new WebSocket(url);
+    
     s.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
-        setCalledNumbers(prev => new Set(prev).add(data.number));
-        setCurrentNumber(data.number);
+        const newNumber = data.number;
+        setCalledNumbers(prev => new Set(prev).add(newNumber));
+        setCurrentNumber(prevCurrent => {
+          if (prevCurrent) {
+            setCallHistory(prevHistory => [prevCurrent, ...prevHistory].slice(0, 4));
+          }
+          return newNumber;
+        });
         setNextNumber(data.next_number);
-        speakNumber(data.number, audioLanguage);
+        speakNumber(newNumber, audioLanguage);
       }
     };
     setSocket(s);
@@ -147,6 +168,29 @@ export default function GameRunner({ game, token, callSpeed, audioLanguage }) {
         </div>
         <div className="flex-1 flex flex-col gap-6">
           <NumberGrid calledNumbers={calledNumbers} />
+          <div className="flex items-center justify-between bg-[#1e293b] p-4 rounded-lg flex-grow">
+            <div className="flex items-center justify-center flex-grow">
+              {currentNumber ? (
+                <div className="w-32 h-32 rounded-full bg-yellow-400 border-4 border-white flex items-center justify-center shadow-lg">
+                  <span className="text-5xl font-bold text-black">{getBingoLetter(currentNumber)}{currentNumber}</span>
+                </div>
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center">
+                  <span className="text-xl text-gray-400">Press Resume</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col items-center justify-center gap-2">
+              <div className="text-gray-400 font-semibold mb-2">PREVIOUS</div>
+              <div className="flex gap-2">
+                {callHistory.map((num, index) => (
+                  <div key={index} className="w-20 h-20 rounded-full bg-gray-800 border-2 border-red-500 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-white">{getBingoLetter(num)}{num}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="text-center text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
         </div>
       </div>
