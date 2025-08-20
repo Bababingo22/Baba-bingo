@@ -35,15 +35,16 @@ export default function CreateGameWizard({ onCreated }) {
           <button type="button" onClick={() => setGameSpeed('Super Fast')} className={`px-4 py-2 rounded-md font-semibold ${getSpeedButtonClass('Super Fast')}`}>Super Fast Bingo</button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Bet Amount</label>
-            <select value={betAmount} onChange={(e) => setBetAmount(e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={30}>30</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
+         <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Bet Amount</
+label>
+            <input
+              type="number"
+              value={betAmount}
+              onChange={(e) => setBetAmount(e.target.value)}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
+              placeholder="Enter amount"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Winning Pattern</label>
