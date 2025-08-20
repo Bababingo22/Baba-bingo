@@ -3,7 +3,7 @@ import Login from './components/Login';
 import CreateGameWizard from './components/CreateGameWizard';
 import GameRunner from './components/GameRunner';
 import Sidebar from './components/Sidebar';
-// REMOVED: The broken import for the non-existent BoardView component
+import TransactionHistory from './components/TransactionHistory';
 import api, { setToken } from './services/api';
 
 export default function App() {
@@ -20,7 +20,10 @@ export default function App() {
     if (t) {
       setToken(t);
       setTokenState(t);
-      api.get('/me/').then(r => { setUser(r.data); setAuthed(true); }).catch(() => {
+      api.get('/me/').then(r => { 
+        setUser(r.data); 
+        setAuthed(true); 
+      }).catch(() => {
         localStorage.removeItem('token');
         setToken(null);
         setAuthed(false);
@@ -59,7 +62,7 @@ export default function App() {
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         {mainContent}
       </div>
     </div>
@@ -73,7 +76,9 @@ export default function App() {
     case 'runner':
       mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
       break;
-    // REMOVED: The 'board' case is no longer needed
+    case 'report':
+      mainContent = <TransactionHistory />;
+      break;
     default:
       mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
   }
