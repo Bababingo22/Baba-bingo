@@ -1,63 +1,55 @@
-import React, { useEffect, useState } from "react";
-import Login from "./components/Login";
-import Dashboard from "./components/Dashboard";
-import CreateGameWizard from "./components/CreateGameWizard";
-import TransactionHistory from "./components/TransactionHistory";
-import BoardActivationCenter from "./components/BoardActivationCenter";
-import GameRunner from "./components/GameRunner";
-import Sidebar from "./components/Sidebar";
-import api, { setToken } from "./services/api";
+import React, { useEffect, useState } from 'react';
+import Login from './components/Login';
+import CreateGameWizard from './components/CreateGameWizard';
+import GameRunner from './components/GameRunner';
+import api, { setToken } from './services/api';
 
 export default function App() {
   const [authed, setAuthed] = useState(false);
   const [user, setUser] = useState(null);
-  const [view, setView] = useState("dashboard");
+  const [token, setTokenState] = useState(localStorage.getItem('token'));
+  const [view, setView] = useState('create');
   const [currentGame, setCurrentGame] = useState(null);
-  const [token, setTokState] = useState(localStorage.getItem("token"));
+  const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
 
   useEffect(() => {
-    const t = localStorage.getItem("token");
+    const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
-      api.get("/me/").then(r => {
-        setUser(r.data);
-        setAuthed(true);
-      }).catch(()=> {
-        setAuthed(false);
+      setTokenState(t);
+      api.get('/me/').then(r => { setUser(r.data); setAuthed(true); }).catch(() => {
+        localStorage.removeItem('token');
         setToken(null);
-        localStorage.removeItem("token");
+        setAuthed(false);
       });
     }
   }, []);
 
-  function onLogin({ token, user }) {
+  function handleLogin({ token, user }) {
+    localStorage.setItem('token', token);
     setToken(token);
-    setTokState(token);
+    setTokenState(token);
     setUser(user);
     setAuthed(true);
   }
 
-  function onStartGame() {
-    setView("create");
-  }
-
-  function onCreated(game) {
+  function handleGameCreated(game, settings) {
     setCurrentGame(game);
-    setView("runner");
+    setGameSettings(settings);
+    setView('runner');
   }
 
-  if (!authed) return <Login onLogin={onLogin} />;
+  if (!authed) {
+    return <Login onLogin={handleLogin} />;
+  }
+  
+  if (view === 'create') {
+    return <CreateGameWizard onCreated={handleGameCreated} />;
+  }
+  
+  if (view === 'runner' && currentGame) {
+    return <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} />;
+  }
 
-  return (
-    <div className="flex">
-      <Sidebar onNav={setView} profile={user} />
-      <div className="flex-1 min-h-screen">
-        {view === "dashboard" && <Dashboard user={user} onStartGame={onStartGame} />}
-        {view === "create" && <CreateGameWizard onCreated={onCreated} />}
-        {view === "transactions" && <TransactionHistory />}
-        {view === "runner" && currentGame && <GameRunner game={currentGame} token={token} />}
-        {view === "online" && <div className="p-6">Online games list (coming soon)</div>}
-      </div>
-    </div>
-  );
+  return <div><button onClick={() => setView('create')}>Start Over</button></div>;
 }
