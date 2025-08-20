@@ -50,8 +50,7 @@ export default function Sidebar({ user, onNav, isExpanded, onToggle }) {
         {/* Main Navigation */}
         <nav className="flex flex-col space-y-2 mb-8">
           <button onClick={() => onNav('create')} className="p-3 text-left bg-gray-700 rounded-md font-semibold">Dashboard</button>
-          <button onClick={() => onNav('board')} className="p-3 text-left hover:bg-gray-700 rounded-md">Board</button>
-          <button onClick={() => alert('Report page coming soon!')} className="p-3 text-left hover:bg-gray-700 rounded-md">Report</button>
+          <button onClick={() => onNav('report')} className="p-3 text-left hover:bg-gray-700 rounded-md">Report</button>
           <button onClick={() => alert('Online Games coming soon!')} className="p-3 text-left hover:bg-gray-700 rounded-md">Online Games</button>
         </nav>
 
@@ -65,7 +64,7 @@ export default function Sidebar({ user, onNav, isExpanded, onToggle }) {
             </div>
             <div className="bg-gray-900 p-4 rounded-lg">
               <div className="text-gray-500">Wallet</div>
-              <div className="text-2xl font-bold">{Number(stats.wallet).toFixed(2)} Birr</div>
+              <div className="text-2xl font-bold">{Number(user.operational_credit).toFixed(2)} Birr</div>
             </div>
           </div>
         </div>
@@ -88,16 +87,4 @@ export default function Sidebar({ user, onNav, isExpanded, onToggle }) {
 
       {/* --- BOTTOM SECTION: Logout Button --- */}
       <div className="mt-auto">
-        {/* Show logout button only when expanded */}
-        {isExpanded && (
-          <button 
-            onClick={handleLogout} 
-            className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
-          >
-            Log Out
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
+        {/* Show logout button 
