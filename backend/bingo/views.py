@@ -22,7 +22,6 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
 class TransactionListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-
     def get(self, request):
         user = request.user
         if not user.is_agent:
@@ -33,7 +32,6 @@ class TransactionListView(APIView):
 
 class CreateGameView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-
     def post(self, request):
         user = request.user
         if not user.is_agent:
@@ -56,26 +54,19 @@ class CreateGameView(APIView):
         user.save()
         
         Transaction.objects.create(
-            agent=user,
-            type="GAME_LAUNCH",
-            amount=-launch_cost,
-            running_balance=user.operational_credit,
-            note=f"Game launch cost for {game_type}"
+            agent=user, type="GAME_LAUNCH", amount=-launch_cost,
+            running_balance=user.operational_credit, note=f"Game launch cost for {game_type}"
         )
         
         game = GameRound.objects.create(
-            agent=user,
-            game_type=game_type,
-            winning_pattern=winning_pattern,
-            amount=amount,
-            status="PENDING"
+            agent=user, game_type=game_type, winning_pattern=winning_pattern,
+            amount=amount, status="PENDING"
         )
         serializer = GameRoundSerializer(game)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class GameDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-
     def get(self, request, pk):
         game = get_object_or_404(GameRound, pk=pk)
         if request.user != game.agent and not request.user.is_staff:
@@ -91,10 +82,18 @@ class CurrentUserView(APIView):
 
 class PermanentCardDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-
     def get(self, request, card_number):
         try:
             card = PermanentCard.objects.get(card_number=card_number)
             return Response({'card_number': card.card_number, 'board': card.board})
         except PermanentCard.DoesNotExist:
             return Response({"detail": "Card not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class GameHistoryView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def get(self, request):
+        if not request.user.is_agent:
+            return Response({"detail": "Only agents have a game history."}, status=status.HTTP_403_FORBIDDEN)
+        games = GameRound.objects.filter(agent=request.user).order_by('-created_at')
+        serializer = GameRoundSerializer(games, many=True)
+        return Response(serializer.data)
