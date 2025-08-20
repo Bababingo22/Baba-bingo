@@ -1,5 +1,9 @@
 from django.urls import path
-from .views import TransactionListView, CreateGameView, GameDetailView, MyTokenObtainPairView, CurrentUserView, PermanentCardDetailView
+from .views import (
+    TransactionListView, CreateGameView, GameDetailView, 
+    MyTokenObtainPairView, CurrentUserView, PermanentCardDetailView, 
+    GameHistoryView
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -7,9 +11,8 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("transactions/", TransactionListView.as_view(), name="transactions"),
     path("games/create/", CreateGameView.as_view(), name="create_game"),
+    path("games/history/", GameHistoryView.as_view(), name="game_history"),
     path("games/<int:pk>/", GameDetailView.as_view(), name="game_detail"),
     path("me/", CurrentUserView.as_view(), name="me"),
-    
-    # --- ADD THIS NEW LINE FOR THE WIN-CHECKER API ---
     path("cards/<int:card_number>/", PermanentCardDetailView.as_view(), name="permanent_card_detail"),
 ]
