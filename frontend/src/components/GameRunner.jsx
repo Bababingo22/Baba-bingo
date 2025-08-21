@@ -1,25 +1,34 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 
-// --- THIS IS THE ONLY UI COMPONENT ON THE PAGE ---
-// It renders the main 75-number B-I-N-G-O grid.
+// --- THIS IS THE CORRECTED NUMBER GRID ---
+// It uses a robust flexbox layout to create the horizontal rows.
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
-  const columns = headers.map((_, index) => Array.from({ length: 15 }, (_, i) => index * 15 + 1 + i));
+
   return (
-    <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
-      <div className="flex justify-around h-full">
-        {headers.map((header, colIndex) => (
-          <div key={header} className="flex flex-col items-center gap-1 w-1/5">
-            <div className="w-10 h-10 flex items-center justify-center text-2xl font-bold">{header}</div>
-            {columns[colIndex].map(num => (
-              <div key={num} className={`w-10 h-10 flex items-center justify-center text-md font-semibold rounded-full transition-colors ${calledNumbers.has(num) ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-300'}`}>
-                {num}
-              </div>
-            ))}
+    <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex flex-col justify-around">
+      {headers.map((letter, rowIndex) => (
+        <div key={letter} className="flex items-center gap-4">
+          <div className="w-10 text-center font-bold text-3xl">{letter}</div>
+          <div className="flex-1 grid grid-cols-15 gap-2">
+            {Array.from({ length: 15 }, (_, colIndex) => {
+              const num = rowIndex * 15 + colIndex + 1;
+              const isCalled = calledNumbers.has(num);
+              return (
+                <div 
+                  key={num} 
+                  className={`w-full aspect-square flex items-center justify-center text-md font-semibold rounded-full transition-colors ${
+                    isCalled ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  {num}
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 };
