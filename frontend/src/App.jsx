@@ -13,21 +13,27 @@ export default function App() {
   const [view, setView] = useState('create');
   const [currentGame, setCurrentGame] = useState(null);
   const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true); // Start expanded
+
+  // --- NEW: State for shared data ---
+  const [gameHistory, setGameHistory] = useState([]);
+
+  // --- NEW: Function to refresh all shared data ---
+  const refreshDashboardData = () => {
+    // Re-fetch the user data to get the latest credit
+    api.get('/me/').then(r => setUser(r.data));
+    // Re-fetch the game history to get the latest list of games
+    api.get('/games/history/').then(r => setGameHistory(r.data));
+  };
 
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
-      api.get('/me/').then(r => { 
-        setUser(r.data); 
-        setAuthed(true); 
-      }).catch(() => {
-        localStorage.removeItem('token');
-        setToken(null);
-        setAuthed(false);
-      });
+      // When the app loads, fetch the initial data
+      refreshDashboardData();
+      setAuthed(true);
     }
   }, []);
 
@@ -36,6 +42,7 @@ export default function App() {
     setToken(token);
     setTokenState(token);
     setUser(user);
+    refreshDashboardData(); // Fetch data after logging in
     setAuthed(true);
   }
 
@@ -43,11 +50,12 @@ export default function App() {
     setCurrentGame(game);
     setGameSettings(settings);
     setView('runner');
+    refreshDashboardData(); // --- CRITICAL: Refresh data after creating a game ---
   }
   
   const handleNav = (newView) => {
     setView(newView);
-    setIsSidebarExpanded(true);
+    if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
 
   if (!authed) {
@@ -56,15 +64,15 @@ export default function App() {
   
   const renderMainApp = (mainContent) => (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
+      {/* Pass the fresh data down to the Sidebar */}
       <Sidebar 
         user={user} 
+        gameHistory={gameHistory}
         onNav={handleNav}
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
-      <div className="flex-1 overflow-y-auto">
-        {mainContent}
-      </div>
+      <div className="flex-1 overflow-y-auto">{mainContent}</div>
     </div>
   );
 
@@ -77,7 +85,8 @@ export default function App() {
       mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
       break;
     case 'report':
-      mainContent = <TransactionHistory />;
+      // Pass the fresh game history to the report page as well
+      mainContent = <TransactionHistory gameHistory={gameHistory} />;
       break;
     default:
       mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
