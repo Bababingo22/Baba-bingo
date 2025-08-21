@@ -11,6 +11,7 @@ export default function CreateGameWizard({ onCreated }) {
   const [selectedCards, setSelectedCards] = useState(new Set());
 
   const getSpeedButtonClass = (speed) => gameSpeed === speed ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300';
+  
   const cardNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
 
   const toggleCardSelection = (cardNumber) => {
@@ -59,19 +60,27 @@ export default function CreateGameWizard({ onCreated }) {
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Winning Pattern</label>
             <select value={winningPattern} onChange={(e) => setWinningPattern(e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
-              <option>All Common Patterns</option><option>Full House</option><option>L Shape</option><option>Both Diagonal Line</option>
+              <option>All Common Patterns</option>
+              <option>Full House</option>
+              <option>L Shape</option>
+              <option>Both Diagonal Line</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Audio Language</label>
             <select value={audioLanguage} onChange={(e) => setAudioLanguage(e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
-              <option>Amharic Male</option><option>Amharic Female</option>
+              <option>Amharic Male</option>
+              <option>Amharic Female</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Call Speed</label>
             <select value={callSpeed} onChange={(e) => setCallSpeed(e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
-              <option value={5}>5 seconds</option><option value={6}>6 seconds</option><option value={7}>7 seconds</option><option value={10}>10 seconds</option><option value={15}>15 seconds</option>
+              <option value={5}>5 seconds</option>
+              <option value={6}>6 seconds</option>
+              <option value={7}>7 seconds</option>
+              <option value={10}>10 seconds</option>
+              <option value={15}>15 seconds</option>
             </select>
           </div>
         </div>
@@ -89,7 +98,14 @@ export default function CreateGameWizard({ onCreated }) {
           </div>
           <div className="grid grid-cols-10 md:grid-cols-20 gap-2">
             {cardNumbers.map(num => (
-              <button type="button" key={num} onClick={() => toggleCardSelection(num)} className={`w-12 h-12 flex items-center justify-center rounded-md font-semibold transition-colors ${selectedCards.has(num) ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-300'}`}>
+              <button
+                type="button"
+                key={num}
+                onClick={() => toggleCardSelection(num)}
+                className={`w-12 h-12 flex items-center justify-center rounded-md font-semibold transition-colors ${
+                  selectedCards.has(num) ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-gray-300'
+                }`}
+              >
                 {num}
               </button>
             ))}
@@ -105,92 +121,4 @@ export default function CreateGameWizard({ onCreated }) {
       </form>
     </div>
   );
-}```
-
-#### **File 2: `frontend/src/App.jsx` (Modified)**
-This is the updated layout file. It shows the `Sidebar` on the left and the `CreateGameWizard` on the right, which is exactly the layout from your drawing.
-
-```jsx
-import React, { useEffect, useState } from 'react';
-import Login from './components/Login';
-import CreateGameWizard from './components/CreateGameWizard';
-import GameRunner from './components/GameRunner';
-import Sidebar from './components/Sidebar';
-import TransactionHistory from './components/TransactionHistory';
-import api, { setToken } from './services/api';
-
-export default function App() {
-  const [authed, setAuthed] = useState(false);
-  const [user, setUser] = useState(null);
-  const [token, setTokenState] = useState(localStorage.getItem('token'));
-  const [view, setView] = useState('create');
-  const [currentGame, setCurrentGame] = useState(null);
-  const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true); // Default to expanded
-
-  useEffect(() => {
-    const t = localStorage.getItem('token');
-    if (t) {
-      setToken(t);
-      setTokenState(t);
-      api.get('/me/').then(r => { setUser(r.data); setAuthed(true); }).catch(() => {
-        localStorage.removeItem('token');
-        setToken(null);
-        setAuthed(false);
-      });
-    }
-  }, []);
-
-  function handleLogin({ token, user }) {
-    localStorage.setItem('token', token);
-    setToken(token);
-    setTokenState(token);
-    setUser(user);
-    setAuthed(true);
-  }
-
-  function handleGameCreated(game, settings) {
-    setCurrentGame(game);
-    setGameSettings(settings);
-    setView('runner');
-  }
-  
-  const handleNav = (newView) => {
-    setView(newView);
-  };
-
-  if (!authed) {
-    return <Login onLogin={handleLogin} />;
-  }
-  
-  const renderMainApp = (mainContent) => (
-    <div className="flex bg-[#0f172a] text-white min-h-screen">
-      <Sidebar 
-        user={user} 
-        onNav={handleNav}
-        isExpanded={isSidebarExpanded}
-        onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
-      />
-      <div className="flex-1 overflow-y-auto">
-        {mainContent}
-      </div>
-    </div>
-  );
-
-  let mainContent;
-  switch (view) {
-    case 'create':
-      mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
-      break;
-    case 'runner':
-      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
-      break;
-    case 'report':
-      mainContent = <TransactionHistory />;
-      break;
-    default:
-      mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
-  }
-
-  return renderMainApp(mainContent);
 }
