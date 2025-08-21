@@ -1,27 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 
-const getBingoLetter = (number) => {
-  if (number >= 1 && number <= 15) return 'B';
-  if (number >= 16 && number <= 30) return 'I';
-  if (number >= 31 && number <= 45) return 'N';
-  if (number >= 46 && number <= 60) return 'G';
-  if (number >= 61 && number <= 75) return 'O';
-  return '';
-};
-
-// --- THIS IS THE CORRECTED NUMBER GRID WITH THE NEW STYLE ---
+// --- THIS IS THE ONLY UI COMPONENT ON THE PAGE ---
+// It renders the main 75-number B-I-N-G-O grid with the correct styling.
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
 
   return (
     <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
-      <table className="w-full h-full border-separate" style={{borderSpacing: '4px'}}>
+      <table className="w-full h-full border-separate" style={{ borderSpacing: '8px' }}>
         <tbody>
           {headers.map((letter, rowIndex) => (
             <tr key={letter}>
               {/* White box for B-I-N-G-O letters */}
-              <td className="w-[4%] bg-white text-blue-600 font-bold text-2xl text-center rounded-md">{letter}</td>
+              <td className="w-12 bg-white text-blue-600 font-bold text-2xl text-center rounded-md">{letter}</td>
               
               {Array.from({ length: 15 }).map((_, colIndex) => {
                 const num = rowIndex * 15 + colIndex + 1;
@@ -29,7 +21,7 @@ const NumberGrid = ({ calledNumbers }) => {
                 return (
                   <td 
                     key={num} 
-                    className={`w-1/15 text-center font-semibold text-lg transition-colors duration-300 ${
+                    className={`text-center font-semibold text-xl transition-colors duration-300 ${
                       isCalled ? 'text-white font-bold' : 'text-gray-600'
                     }`}
                   >
@@ -45,44 +37,61 @@ const NumberGrid = ({ calledNumbers }) => {
   );
 };
 
-// --- The rest of the GameRunner is unchanged, but included for completeness ---
-const CardCheckModal = ({ cardData, calledNumbers, onClose }) => { /* ... */ };
+// --- Main GameRunner with MINIMALIST LAYOUT ---
+export default function GameRunner({ game, token, callSpeed, audioLanguage }) {
+  const [socket, setSocket] = useState(null);
+  const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
+  const intervalRef = useRef(null);
 
-export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
-  // ... (All state and functions are the same) ...
+  useEffect(() => {
+    const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
+    const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
+    const url = `${wsProto}/${apiHost}/ws/game/${game.id}/?token=${token}`;
+    const s = new WebSocket(url);
+    
+    s.onmessage = (ev) => {
+      const data = JSON.parse(ev.data);
+      if (data.action === "call_number") {
+        const newNumber = data.number;
+        setCalledNumbers(prev => new Set(prev).add(newNumber));
+        speakNumber(newNumber, audioLanguage);
+      }
+    };
+    setSocket(s);
+    
+    // Automatically start the game when the page loads
+    const startInterval = (ws) => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ action: 'call_next' }));
+        }
+      }, callSpeed * 1000);
+    };
 
+    if (s.readyState === WebSocket.OPEN) {
+        startInterval(s);
+    } else {
+        s.onopen = () => startInterval(s);
+    }
+
+    return () => { 
+      s.close(); 
+      if (intervalRef.current) clearInterval(intervalRef.current); 
+    };
+  }, [game.id, token, callSpeed, audioLanguage]);
+
+  function speakNumber(number, lang) {
+    if (!('speechSynthesis' in window)) return;
+    const msg = new SpeechSynthesisUtterance(String(number));
+    if (lang === 'Amharic Male' || lang === 'Amharic Female') msg.lang = 'am-ET';
+    window.speechSynthesis.speak(msg);
+  }
+
+  // The entire page is now just the number grid, filling the screen.
   return (
-    <>
-      <CardCheckModal cardData={cardDataForModal} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
-      <div className="flex bg-[#0f172a] text-white h-screen">
-        <div className="w-64 flex flex-col gap-4 p-4 border-r border-gray-700">
-          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
-            <div className="text-gray-400 font-semibold">Total Calls</div>
-            <div className="text-7xl font-bold">{calledNumbers.size}</div>
-          </div>
-          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
-            <div className="text-gray-400 font-semibold mb-2">Winning Pattern</div>
-            <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40 border-2 border-gray-600 p-1">
-              {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,12,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
-            </div>
-          </div>
-          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center flex-1 flex flex-col justify-center">
-            <div className="text-gray-400 font-semibold">Next Number</div>
-            <div className="text-8xl font-bold mt-4">{nextNumber || '-'}</div>
-          </div>
-          <div className="space-y-2">
-            <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
-            <div className="flex gap-2">
-              <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
-              <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
-            </div>
-            <button onClick={() => onNav('create')} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col gap-4 p-4">
-          <NumberGrid calledNumbers={calledNumbers} />
-        </div>
-      </div>
-    </>
+    <div className="flex flex-col p-4 bg-[#0f172a] h-screen">
+      <NumberGrid calledNumbers={calledNumbers} />
+    </div>
   );
 }
