@@ -1,6 +1,6 @@
 import React from 'react';
 
-// The sidebar now receives gameHistory as a prop
+// This is a "dumb" component. It only displays the props it is given.
 export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle }) {
 
   const handleLogout = () => {
@@ -33,12 +33,12 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
           <div className="space-y-4">
             <div className="bg-gray-900 p-4 rounded-lg">
               <div className="text-gray-500">Total Games</div>
-              {/* Display the count from the prop */}
+              {/* --- CORRECTED: Directly uses the length of the gameHistory prop --- */}
               <div className="text-2xl font-bold">{gameHistory.length}</div>
             </div>
             <div className="bg-gray-900 p-4 rounded-lg">
               <div className="text-gray-500">Wallet</div>
-              {/* Display the credit directly from the user prop */}
+              {/* --- CORRECTED: Directly uses the credit from the user prop --- */}
               <div className="text-2xl font-bold">{Number(user.operational_credit).toFixed(2)} Birr</div>
             </div>
           </div>
@@ -52,7 +52,7 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
               <tr><th className="p-2">Date</th><th className="p-2">Bet</th><th className="p-2">Status</th></tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {/* Display the list from the prop */}
+              {/* --- CORRECTED: Directly uses the gameHistory prop --- */}
               {gameHistory.slice(0, 5).map(game => (
                 <tr key={game.id}><td className="p-2">{new Date(game.created_at).toLocaleDateString()}</td><td className="p-2">{Number(game.amount).toFixed(0)} Birr</td><td className="p-2">{game.status}</td></tr>
               ))}
