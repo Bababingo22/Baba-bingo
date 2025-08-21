@@ -15,8 +15,6 @@ export default function App() {
   const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [gameHistory, setGameHistory] = useState([]);
-  
-  // isLoading is critical to prevent premature redirects
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -24,36 +22,21 @@ export default function App() {
     if (t) {
       setToken(t);
       setTokenState(t);
-      
-      // First, verify the token by fetching the user.
-      api.get('/me/')
-        .then(userResponse => {
-          // --- SUCCESS ---
-          // The token is valid. Now we are truly authenticated.
-          setUser(userResponse.data);
-          setAuthed(true); 
-          // Now, fetch the rest of the data.
-          api.get('/games/history/').then(historyResponse => {
-            setGameHistory(historyResponse.data);
-          });
-        })
-        .catch(() => {
-          // --- FAILURE ---
-          // The token is invalid (expired, etc.). Log the user out.
-          localStorage.removeItem('token');
-          setToken(null);
-          setAuthed(false);
-        })
-        .finally(() => {
-          // --- ALWAYS RUNS ---
-          // No matter if it succeeded or failed, the loading process is over.
-          setIsLoading(false);
+      api.get('/me/').then(userResponse => {
+        setUser(userResponse.data);
+        setAuthed(true);
+        api.get('/games/history/').then(historyResponse => {
+          setGameHistory(historyResponse.data);
         });
+      }).catch(() => {
+        localStorage.removeItem('token');
+        setToken(null);
+        setAuthed(false);
+      }).finally(() => setIsLoading(false));
     } else {
-      // If there's no token, we are not logged in and we are done loading.
       setIsLoading(false);
     }
-  }, []); // The empty array ensures this effect only runs once on app start
+  }, []);
 
   const refreshDashboardData = () => {
     api.get('/me/').then(r => setUser(r.data));
@@ -81,13 +64,11 @@ export default function App() {
     if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
   
-  // This will now correctly show a loading screen until the API call is finished.
   if (isLoading) {
     return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>;
   }
 
-  // This check now only runs AFTER loading is complete.
-  if (!authed) {
+  if (!authed || !user) {
     return <Login onLogin={handleLogin} />;
   }
   
@@ -110,6 +91,7 @@ export default function App() {
       mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
       break;
     case 'runner':
+      // --- THIS IS THE CORRECTED LINE ---
       mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
       break;
     case 'report':
