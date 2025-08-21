@@ -66,7 +66,7 @@ const NumberGrid = ({ calledNumbers }) => {
   );
 };
 
-export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
+export default function GameRunner({ game, token, callSpeed, audioLanguage, onNav }) {
   const [socket, setSocket] = useState(null);
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
   const [nextNumber, setNextNumber] = useState(null);
@@ -127,7 +127,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
         <NumberGrid calledNumbers={calledNumbers} />
         
-        <div className="flex-1 grid grid-cols-2 gap-4">
+        <div className="flex-1 grid grid-cols-[300px_1fr] gap-4">
           {/* Left Column of Controls */}
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
@@ -148,12 +148,14 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
 
           {/* Right Column of Displays */}
           <div className="flex flex-col gap-4">
-            <div className="text-center text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
-            <div className="bg-[#1e2b3a] p-4 rounded-lg">
-              <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
-              <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
-                {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,12,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
-              </div>
+            <div className="flex justify-between items-start">
+                <div className="text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
+                <div className="bg-[#1e2b3a] p-4 rounded-lg">
+                    <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
+                    <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
+                        {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,12,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
+                    </div>
+                </div>
             </div>
             <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
               <div className="flex items-center justify-center gap-3">
