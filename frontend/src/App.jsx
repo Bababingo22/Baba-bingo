@@ -15,6 +15,9 @@ export default function App() {
   const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [gameHistory, setGameHistory] = useState([]);
+  
+  // --- CORRECTED: isLoading is now a more reliable check ---
+  // It starts as true, and is only set to false once we know FOR SURE if the user is logged in or not.
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,25 +26,34 @@ export default function App() {
       setToken(t);
       setTokenState(t);
       
-      Promise.all([
-        api.get('/me/'),
-        api.get('/games/history/')
-      ]).then(([userResponse, historyResponse]) => {
-        setUser(userResponse.data);
-        setGameHistory(historyResponse.data);
-        setAuthed(true);
-      }).catch(() => {
-        localStorage.removeItem('token');
-        setToken(null);
-        setAuthed(false);
-      }).finally(() => {
-        setIsLoading(false);
-      });
+      // Fetch user data to verify the token is still valid.
+      api.get('/me/')
+        .then(userResponse => {
+          setUser(userResponse.data);
+          setAuthed(true); // Only set authed on success
+          // Fetch other data only after confirming the user is valid
+          api.get('/games/history/').then(historyResponse => {
+            setGameHistory(historyResponse.data);
+          });
+        })
+        .catch(() => {
+          // If the token is invalid, log the user out.
+          localStorage.removeItem('token');
+          setToken(null);
+          setAuthed(false);
+        })
+        .finally(() => {
+          // THIS IS THE CRITICAL FIX:
+          // No matter what happens (success or failure), set loading to false at the very end.
+          setIsLoading(false);
+        });
     } else {
+      // If there's no token, we are done loading.
       setIsLoading(false);
     }
   }, []);
 
+  // --- REFRESH DATA FUNCTION REMAINS THE SAME ---
   const refreshDashboardData = () => {
     api.get('/me/').then(r => setUser(r.data));
     api.get('/games/history/').then(r => setGameHistory(r.data));
@@ -68,10 +80,12 @@ export default function App() {
     if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
   
+  // This is now the first check. Nothing will be rendered until we know the auth status.
   if (isLoading) {
-    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Loading...</div>;
+    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>;
   }
 
+  // This check now only runs after loading is complete.
   if (!authed) {
     return <Login onLogin={handleLogin} />;
   }
@@ -95,7 +109,7 @@ export default function App() {
       mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
       break;
     case 'runner':
-      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
+      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWidget onCreated={handleGameCreated} />;
       break;
     case 'report':
       mainContent = <TransactionHistory />;
