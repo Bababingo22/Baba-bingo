@@ -60,7 +60,6 @@ const NumberGrid = ({ calledNumbers }) => {
   );
 };
 
-// --- Main GameRunner with Compact Layout ---
 export default function GameRunner({ game, token, callSpeed, audioLanguage }) {
   const [socket, setSocket] = useState(null);
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
@@ -120,7 +119,6 @@ export default function GameRunner({ game, token, callSpeed, audioLanguage }) {
     <>
       <CardCheckModal cardData={cardDataForModal} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
       <div className="flex bg-[#0f172a] text-white p-4 gap-4 h-screen">
-        {/* --- LEFT COLUMN: Game Controls --- */}
         <div className="w-64 flex flex-col gap-4">
           <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
             <div className="text-gray-400 font-semibold">Total Calls</div>
@@ -145,9 +143,28 @@ export default function GameRunner({ game, token, callSpeed, audioLanguage }) {
             <button className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
           </div>
         </div>
-
-        {/* --- RIGHT COLUMN: Main Content --- */}
         <div className="flex-1 flex flex-col gap-4">
           <NumberGrid calledNumbers={calledNumbers} />
           <div className="flex items-center justify-between bg-[#1e2b3a] p-4 rounded-lg flex-grow">
-            <div className="flex items-cente
+            <div className="flex items-center justify-center flex-grow">
+              {currentNumber ? (
+                <div className="w-32 h-32 rounded-full bg-yellow-400 border-4 border-white flex items-center justify-center shadow-lg"><span className="text-5xl font-bold text-black">{getBingoLetter(currentNumber)}{currentNumber}</span></div>
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center"><span className="text-xl text-gray-400">Press Resume</span></div>
+              )}
+            </div>
+            <div className="flex flex-col items-center justify-center gap-2">
+              <div className="text-gray-400 font-semibold mb-2">PREVIOUS</div>
+              <div className="flex gap-2">
+                {callHistory.map((num, index) => (
+                  <div key={index} className="w-20 h-20 rounded-full bg-gray-800 border-2 border-red-500 flex items-center justify-center"><span className="text-3xl font-bold text-white">{getBingoLetter(num)}{num}</span></div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="text-center text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
+        </div>
+      </div>
+    </>
+  );
+}
