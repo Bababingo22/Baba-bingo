@@ -15,51 +15,65 @@ export default function App() {
   const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [gameHistory, setGameHistory] = useState([]);
+  
+  // isLoading is critical to prevent premature redirects
   const [isLoading, setIsLoading] = useState(true);
-
-  // This is a robust function to fetch all dashboard data
-  const refreshDashboardData = () => {
-    // We fetch both user and history at the same time
-    Promise.all([
-      api.get('/me/'),
-      api.get('/games/history/')
-    ]).then(([userResponse, historyResponse]) => {
-      setUser(userResponse.data);
-      setGameHistory(historyResponse.data);
-    }).catch(error => {
-      console.error("Failed to refresh dashboard data:", error);
-      // If fetching fails, it might be an auth issue, so log out
-      localStorage.removeItem('token');
-      setToken(null);
-      setAuthed(false);
-    });
-  };
 
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
-      setAuthed(true); // Assume authenticated for now
-      refreshDashboardData(); // Fetch initial data
+      
+      // First, verify the token by fetching the user.
+      api.get('/me/')
+        .then(userResponse => {
+          // --- SUCCESS ---
+          // The token is valid. Now we are truly authenticated.
+          setUser(userResponse.data);
+          setAuthed(true); 
+          // Now, fetch the rest of the data.
+          api.get('/games/history/').then(historyResponse => {
+            setGameHistory(historyResponse.data);
+          });
+        })
+        .catch(() => {
+          // --- FAILURE ---
+          // The token is invalid (expired, etc.). Log the user out.
+          localStorage.removeItem('token');
+          setToken(null);
+          setAuthed(false);
+        })
+        .finally(() => {
+          // --- ALWAYS RUNS ---
+          // No matter if it succeeded or failed, the loading process is over.
+          setIsLoading(false);
+        });
+    } else {
+      // If there's no token, we are not logged in and we are done loading.
+      setIsLoading(false);
     }
-    setIsLoading(false); // We can stop loading immediately
-  }, []);
+  }, []); // The empty array ensures this effect only runs once on app start
 
+  const refreshDashboardData = () => {
+    api.get('/me/').then(r => setUser(r.data));
+    api.get('/games/history/').then(r => setGameHistory(r.data));
+  };
+  
   function handleLogin({ token, user: loggedInUser }) {
     localStorage.setItem('token', token);
     setToken(token);
     setTokenState(token);
     setUser(loggedInUser);
     setAuthed(true);
-    refreshDashboardData(); // Refresh data after logging in
+    refreshDashboardData();
   }
 
   function handleGameCreated(game, settings) {
     setCurrentGame(game);
     setGameSettings(settings);
     setView('runner');
-    refreshDashboardData(); // --- CRITICAL: Refresh data after creating a game ---
+    refreshDashboardData();
   }
   
   const handleNav = (newView) => {
@@ -67,11 +81,13 @@ export default function App() {
     if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
   
+  // This will now correctly show a loading screen until the API call is finished.
   if (isLoading) {
-    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Loading...</div>;
+    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>;
   }
 
-  if (!authed || !user) { // Added !user check for robustness
+  // This check now only runs AFTER loading is complete.
+  if (!authed) {
     return <Login onLogin={handleLogin} />;
   }
   
