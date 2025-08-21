@@ -43,10 +43,10 @@ const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
   return (
     <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
-      <div className="grid grid-cols-[auto_repeat(15,minmax(0,1fr))] gap-1 text-center">
+      <div className="grid grid-cols-[auto_repeat(15,minmax(0,1fr))] gap-1 text-center h-full">
         <div></div> {/* Empty top-left corner */}
         {Array.from({ length: 15 }).map((_, i) => (
-          <div key={`header-${i+1}`} className="font-bold text-gray-400 text-sm">{i + 1}</div>
+          <div key={`header-${i+1}`} className="font-bold text-gray-400 text-sm flex items-center justify-center">{i + 1}</div>
         ))}
 
         {headers.map((letter, rowIndex) => (
@@ -161,4 +161,29 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
           <div className="flex items-center justify-between bg-[#1e2b3a] p-4 rounded-lg h-40">
             <div className="flex items-center justify-center flex-grow">
               {currentNumber ? (
-                <div className="w-32 h-32 rounded-full bg-yellow-400 border-4 border-white flex items-center justify-center shadow-lg"><span className="text-5xl font-bold text-black
+                <div className="w-32 h-32 rounded-full bg-yellow-400 border-4 border-white flex items-center justify-center shadow-lg">
+                  <span className="text-5xl font-bold text-black">{getBingoLetter(currentNumber)}{currentNumber}</span>
+                </div>
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center">
+                  <span className="text-xl text-gray-400">Press Resume</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col items-center justify-center gap-2">
+              <div className="text-gray-400 font-semibold mb-2">PREVIOUS</div>
+              <div className="flex gap-2">
+                {callHistory.map((num, index) => (
+                  <div key={index} className="w-20 h-20 rounded-full bg-gray-800 border-2 border-red-500 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-white">{getBingoLetter(num)}{num}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="text-center text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
+        </div>
+      </div>
+    </>
+  );
+}
