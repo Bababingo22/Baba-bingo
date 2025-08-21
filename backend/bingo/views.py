@@ -36,9 +36,13 @@ class CreateGameView(APIView):
         user = request.user
         if not user.is_agent:
             return Response({"detail": "Only agents can create games."}, status=status.HTTP_403_FORBIDDEN)
+        
         amount = request.data.get("amount")
         game_type = request.data.get("game_type", "Regular")
         winning_pattern = request.data.get("winning_pattern", "Line")
+        # --- NEW: Get the list of active cards from the frontend request ---
+        active_cards = request.data.get("active_cards", None)
+
         if amount is None:
             return Response({"detail": "Amount is required."}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -59,9 +63,19 @@ class CreateGameView(APIView):
         )
         
         game = GameRound.objects.create(
-            agent=user, game_type=game_type, winning_pattern=winning_pattern,
-            amount=amount, status="PENDING"
+            agent=user,
+            game_type=game_type,
+            winning_pattern=winning_pattern,
+            amount=amount,
+            status="PENDING"
         )
+
+        # --- NEW: If the frontend sent a list of cards, use it ---
+        if active_cards is not None and isinstance(active_cards, list):
+            game.active_card_numbers = active_cards
+            game.save()
+        # If no list is sent, the model's default (all 100 cards) will be used.
+        
         serializer = GameRoundSerializer(game)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -87,7 +101,7 @@ class PermanentCardDetailView(APIView):
             card = PermanentCard.objects.get(card_number=card_number)
             return Response({'card_number': card.card_number, 'board': card.board})
         except PermanentCard.DoesNotExist:
-            return Response({"detail": "Card not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Card not found."}, status=status.HTTP_4_NOT_FOUND)
 
 class GameHistoryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
