@@ -1,19 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
-export default function Sidebar({ user, refreshKey, onNav, isExpanded, onToggle }) {
-  const [gameHistory, setGameHistory] = useState([]);
-
-  // --- CORRECTED: This now runs when the component loads AND when the refreshKey changes ---
-  useEffect(() => {
-    if (isExpanded) {
-      api.get('/games/history/')
-        .then(response => {
-          setGameHistory(response.data);
-        })
-        .catch(error => console.error("Failed to fetch game history:", error));
-    }
-  }, [isExpanded, refreshKey]); // The key from App.jsx triggers this!
+export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle }) {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -23,20 +11,28 @@ export default function Sidebar({ user, refreshKey, onNav, isExpanded, onToggle 
   return (
     <div className={`bg-[#1e2b3a] p-4 flex flex-col h-screen text-white border-r border-gray-700 transition-all duration-300 ${isExpanded ? 'w-80' : 'w-24'}`}>
       
-      <button onClick={onToggle} className="flex items-center space-x-4 p-2 rounded-lg hover:bg-gray-700 w-full text-left mb-8">
+      {/* User Profile / Toggle Button */}
+      <button 
+        onClick={onToggle} 
+        className="flex items-center space-x-4 p-2 rounded-lg hover:bg-gray-700 w-full text-left mb-8"
+      >
         <div className="w-12 h-12 bg-gray-600 rounded-full flex-shrink-0 flex items-center justify-center text-xl font-bold">
           {user.username.charAt(0).toUpperCase()}
         </div>
         {isExpanded && <div><div className="font-bold text-lg">{user.username}</div></div>}
       </button>
 
-      <div className={`flex-1 overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Main Content (Scrollable and Collapsible) */}
+      <div className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+        
+        {/* Navigation */}
         <nav className="flex flex-col space-y-2 mb-8">
           <button onClick={() => onNav('create')} className="p-3 text-left bg-gray-700 rounded-md font-semibold">Dashboard</button>
           <button onClick={() => onNav('report')} className="p-3 text-left hover:bg-gray-700 rounded-md">Report</button>
           <button onClick={() => alert('Online Games coming soon!')} className="p-3 text-left hover:bg-gray-700 rounded-md">Online Games</button>
         </nav>
 
+        {/* Statistics */}
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-gray-400 mb-4">Statistics</h3>
           <div className="space-y-4">
@@ -51,6 +47,7 @@ export default function Sidebar({ user, refreshKey, onNav, isExpanded, onToggle 
           </div>
         </div>
 
+        {/* Recent Games */}
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-400 mb-4">Recent Games</h3>
           <table className="w-full text-sm text-left">
@@ -64,14 +61,19 @@ export default function Sidebar({ user, refreshKey, onNav, isExpanded, onToggle 
             </tbody>
           </table>
         </div>
-      </div>
 
-      <div className="mt-auto">
-        {isExpanded && (
-          <button onClick={handleLogout} className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600">
-            Log Out
-          </button>
-        )}
+        {/* --- LOGOUT BUTTON (MOVED HERE) --- */}
+        {/* It is now inside the main scrolling container */}
+        <div className="mt-auto pt-4">
+          {isExpanded && (
+            <button 
+              onClick={handleLogout} 
+              className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
+            >
+              Log Out
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
