@@ -37,44 +37,43 @@ class CreateGameView(APIView):
         if not user.is_agent:
             return Response({"detail": "Only agents can create games."}, status=status.HTTP_403_FORBIDDEN)
         
-        amount = request.data.get("amount")
-        game_type = request.data.get("game_type", "Regular")
-        winning_pattern = request.data.get("winning_pattern", "Line")
-        # --- NEW: Get the list of active cards from the frontend request ---
-        active_cards = request.data.get("active_cards", None)
-
-        if amount is None:
-            return Response({"detail": "Amount is required."}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            amount = Decimal(amount)
-        except:
-            return Response({"detail": "Invalid amount."}, status=status.HTTP_400_BAD_REQUEST)
+        bet_amount_per_card = request.data.get("amount") 
+        active_cards = request.data.get("active_cards", [])
         
-        launch_cost = amount
+        # --- NEW VALIDATION RULE ---
+        # Check if the list of active_cards exists and has at least 3 cards.
+        if not active_cards or len(active_cards) < 3:
+            return Response({"detail": "You must select at least 3 cards to start a game."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            bet_amount_per_card = Decimal(bet_amount_per_card)
+        except (TypeError, ValueError):
+            return Response({"detail": "Invalid bet amount."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        number_of_cards = len(active_cards)
+        launch_cost = bet_amount_per_card * number_of_cards
+
         if user.operational_credit < launch_cost:
-            return Response({"detail": "Insufficient operational credit."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "detail": f"Insufficient operational credit. Cost: {launch_cost}, Balance: {user.operational_credit}"
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         user.operational_credit = user.operational_credit - launch_cost
         user.save()
         
+        game_type = request.data.get("game_type", "Regular")
         Transaction.objects.create(
             agent=user, type="GAME_LAUNCH", amount=-launch_cost,
-            running_balance=user.operational_credit, note=f"Game launch cost for {game_type}"
+            running_balance=user.operational_credit, note=f"Game launch cost for {game_type} with {number_of_cards} cards"
         )
         
         game = GameRound.objects.create(
-            agent=user,
-            game_type=game_type,
-            winning_pattern=winning_pattern,
-            amount=amount,
-            status="PENDING"
+            agent=user, game_type=game_type,
+            winning_pattern=request.data.get("winning_pattern", "Line"),
+            amount=bet_amount_per_card,
+            status="PENDING",
+            active_card_numbers=active_cards
         )
-
-        # --- NEW: If the frontend sent a list of cards, use it ---
-        if active_cards is not None and isinstance(active_cards, list):
-            game.active_card_numbers = active_cards
-            game.save()
-        # If no list is sent, the model's default (all 100 cards) will be used.
         
         serializer = GameRoundSerializer(game)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -101,7 +100,7 @@ class PermanentCardDetailView(APIView):
             card = PermanentCard.objects.get(card_number=card_number)
             return Response({'card_number': card.card_number, 'board': card.board})
         except PermanentCard.DoesNotExist:
-            return Response({"detail": "Card not found."}, status=status.HTTP_4_NOT_FOUND)
+            return Response({"detail": "Card not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class GameHistoryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
