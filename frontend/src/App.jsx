@@ -17,35 +17,82 @@ export default function App() {
   const [gameHistory, setGameHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ... (All functions like useEffect, refreshDashboardData, handleLogin, etc. remain the same) ...
-  const refreshDashboardData = () => { /* ... */ };
-  useEffect(() => { /* ... */ }, []);
-  function handleLogin({ token, user: loggedInUser }) { /* ... */ }
+  // This function is now standalone and robust
+  const refreshAllData = () => {
+    return Promise.all([
+      api.get('/me/'),
+      api.get('/games/history/')
+    ]).then(([userResponse, historyResponse]) => {
+      setUser(userResponse.data);
+      setGameHistory(historyResponse.data);
+    });
+  };
+
+  useEffect(() => {
+    const t = localStorage.getItem('token');
+    if (t) {
+      setToken(t);
+      setTokenState(t);
+      // Verify token by fetching user data
+      api.get('/me/')
+        .then(userResponse => {
+          setUser(userResponse.data);
+          setAuthed(true);
+          // Only fetch history after confirming user is valid
+          return api.get('/games/history/');
+        })
+        .then(historyResponse => {
+          setGameHistory(historyResponse.data);
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          setToken(null);
+          setAuthed(false);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  function handleLogin({ token, user: loggedInUser }) {
+    localStorage.setItem('token', token);
+    setToken(token);
+    setTokenState(token);
+    setUser(loggedInUser);
+    setAuthed(true);
+    refreshAllData();
+  }
+
   function handleGameCreated(game, settings) {
     setCurrentGame(game);
     setGameSettings(settings);
-    setView('runner'); // This is the key: change the view to 'runner'
-    refreshDashboardData();
+    setView('runner');
+    refreshAllData();
   }
-  const handleNav = (newView) => setView(newView);
-
-  if (isLoading) { return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>; }
-  if (!authed || !user) { return <Login onLogin={handleLogin} />; }
   
-  // --- THIS IS THE FINAL RENDER LOGIC ---
+  const handleNav = (newView) => {
+    setView(newView);
+  };
+  
+  if (isLoading) {
+    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>;
+  }
+
+  if (!authed || !user) {
+    return <Login onLogin={handleLogin} />;
+  }
+  
   if (view === 'runner' && currentGame) {
-    // If the view is 'runner', render the GameRunner as a full-screen component WITHOUT the sidebar.
     return <GameRunner 
-              game={currentGame} 
-              token={token} 
-              user={user}
-              callSpeed={gameSettings.callSpeed} 
-              audioLanguage={gameSettings.audioLanguage}
+              game={currentGame} token={token} user={user}
+              callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage}
               onNav={handleNav}
            />;
   }
 
-  // For all other views ('create', 'report'), render them with the main sidebar layout.
   return (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
       <Sidebar 
@@ -55,10 +102,10 @@ export default function App() {
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
-      <div className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto">
         {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
         {view === 'report' && <TransactionHistory />}
-      </div>
+      </main>
     </div>
   );
 }
