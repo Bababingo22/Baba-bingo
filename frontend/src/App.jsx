@@ -10,95 +10,96 @@ export default function App() {
   const [authed, setAuthed] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setTokenState] = useState(localStorage.getItem('token'));
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState('create');
   const [currentGame, setCurrentGame] = useState(null);
-  const [gameSettings, setGameSettings] = useState({});
+  const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
-  
-  // This is the key to fixing the flicker
+  const [gameHistory, setGameHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const t = localStorage.getItem("token");
+    const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
-      api.get("/me/")
-        .then(r => {
-          // SUCCESS: The token is valid
-          setUser(r.data);
-          setAuthed(true);
-        })
-        .catch(() => {
-          // FAILURE: The token is invalid
-          localStorage.removeItem("token");
-          setToken(null);
-          setAuthed(false);
-        })
-        .finally(() => {
-          // ALWAYS RUNS: The check is complete
-          setIsLoading(false);
+      api.get('/me/').then(userResponse => {
+        setUser(userResponse.data);
+        setAuthed(true);
+        api.get('/games/history/').then(historyResponse => {
+          setGameHistory(historyResponse.data);
         });
+      }).catch(() => {
+        localStorage.removeItem('token');
+        setToken(null);
+        setAuthed(false);
+      }).finally(() => setIsLoading(false));
     } else {
-      // No token exists, so we are done loading
       setIsLoading(false);
     }
   }, []);
 
-  function handleLogin({ token, user }) {
-    localStorage.setItem("token", token);
+  const refreshDashboardData = () => {
+    api.get('/me/').then(r => setUser(r.data));
+    api.get('/games/history/').then(r => setGameHistory(r.data));
+  };
+  
+  function handleLogin({ token, user: loggedInUser }) {
+    localStorage.setItem('token', token);
     setToken(token);
     setTokenState(token);
-    setUser(user);
+    setUser(loggedInUser);
     setAuthed(true);
+    refreshDashboardData();
   }
 
   function handleGameCreated(game, settings) {
     setCurrentGame(game);
     setGameSettings(settings);
-    setView("runner");
+    setView('runner');
+    refreshDashboardData();
   }
-
+  
   const handleNav = (newView) => {
     setView(newView);
+    if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
-
-  // --- THIS IS THE NEW RENDER LOGIC ---
   
-  // 1. If we are still checking the token, show a loading screen.
   if (isLoading) {
     return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>;
   }
 
-  // 2. After loading, if we are not authenticated, show the login page.
-  if (!authed) {
+  if (!authed || !user) {
     return <Login onLogin={handleLogin} />;
   }
-
-  // 3. If we are authenticated, show the correct application view.
-  if (view === 'runner' && currentGame) {
-    return <GameRunner 
-              game={currentGame} 
-              token={token} 
-              user={user}
-              callSpeed={gameSettings.callSpeed} 
-              audioLanguage={gameSettings.audioLanguage}
-              onNav={handleNav}
-           />;
-  }
-
-  return (
+  
+  const renderMainApp = (mainContent) => (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
       <Sidebar 
         user={user} 
+        gameHistory={gameHistory}
         onNav={handleNav}
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
-      <main className="flex-1 overflow-y-auto">
-        {view === 'dashboard' && <CreateGameWizard onCreated={handleGameCreated} />}
-        {view === 'report' && <TransactionHistory />}
-      </main>
+      <div className="flex-1 overflow-y-auto">{mainContent}</div>
     </div>
   );
+
+  let mainContent;
+  switch (view) {
+    case 'create':
+      mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
+      break;
+    case 'runner':
+      // --- THIS IS THE CORRECTED LINE ---
+      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
+      break;
+    case 'report':
+      mainContent = <TransactionHistory />;
+      break;
+    default:
+      mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
+  }
+
+  return renderMainApp(mainContent);
 }
