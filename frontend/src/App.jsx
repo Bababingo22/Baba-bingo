@@ -15,64 +15,51 @@ export default function App() {
   const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [gameHistory, setGameHistory] = useState([]);
-  
-  // --- CORRECTED: isLoading is now a more reliable check ---
-  // It starts as true, and is only set to false once we know FOR SURE if the user is logged in or not.
   const [isLoading, setIsLoading] = useState(true);
+
+  // This is a robust function to fetch all dashboard data
+  const refreshDashboardData = () => {
+    // We fetch both user and history at the same time
+    Promise.all([
+      api.get('/me/'),
+      api.get('/games/history/')
+    ]).then(([userResponse, historyResponse]) => {
+      setUser(userResponse.data);
+      setGameHistory(historyResponse.data);
+    }).catch(error => {
+      console.error("Failed to refresh dashboard data:", error);
+      // If fetching fails, it might be an auth issue, so log out
+      localStorage.removeItem('token');
+      setToken(null);
+      setAuthed(false);
+    });
+  };
 
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
-      
-      // Fetch user data to verify the token is still valid.
-      api.get('/me/')
-        .then(userResponse => {
-          setUser(userResponse.data);
-          setAuthed(true); // Only set authed on success
-          // Fetch other data only after confirming the user is valid
-          api.get('/games/history/').then(historyResponse => {
-            setGameHistory(historyResponse.data);
-          });
-        })
-        .catch(() => {
-          // If the token is invalid, log the user out.
-          localStorage.removeItem('token');
-          setToken(null);
-          setAuthed(false);
-        })
-        .finally(() => {
-          // THIS IS THE CRITICAL FIX:
-          // No matter what happens (success or failure), set loading to false at the very end.
-          setIsLoading(false);
-        });
-    } else {
-      // If there's no token, we are done loading.
-      setIsLoading(false);
+      setAuthed(true); // Assume authenticated for now
+      refreshDashboardData(); // Fetch initial data
     }
+    setIsLoading(false); // We can stop loading immediately
   }, []);
 
-  // --- REFRESH DATA FUNCTION REMAINS THE SAME ---
-  const refreshDashboardData = () => {
-    api.get('/me/').then(r => setUser(r.data));
-    api.get('/games/history/').then(r => setGameHistory(r.data));
-  };
-  
   function handleLogin({ token, user: loggedInUser }) {
     localStorage.setItem('token', token);
     setToken(token);
     setTokenState(token);
     setUser(loggedInUser);
     setAuthed(true);
-    refreshDashboardData();
+    refreshDashboardData(); // Refresh data after logging in
   }
 
   function handleGameCreated(game, settings) {
     setCurrentGame(game);
     setGameSettings(settings);
     setView('runner');
-    refreshDashboardData();
+    refreshDashboardData(); // --- CRITICAL: Refresh data after creating a game ---
   }
   
   const handleNav = (newView) => {
@@ -80,13 +67,11 @@ export default function App() {
     if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
   
-  // This is now the first check. Nothing will be rendered until we know the auth status.
   if (isLoading) {
-    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>;
+    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
 
-  // This check now only runs after loading is complete.
-  if (!authed) {
+  if (!authed || !user) { // Added !user check for robustness
     return <Login onLogin={handleLogin} />;
   }
   
@@ -109,7 +94,7 @@ export default function App() {
       mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
       break;
     case 'runner':
-      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWidget onCreated={handleGameCreated} />;
+      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
       break;
     case 'report':
       mainContent = <TransactionHistory />;
