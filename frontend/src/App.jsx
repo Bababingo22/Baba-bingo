@@ -13,50 +13,69 @@ export default function App() {
   const [view, setView] = useState('create');
   const [currentGame, setCurrentGame] = useState(null);
   const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true); // Start expanded
-
-  // --- NEW: State for shared data ---
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [gameHistory, setGameHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // Add a loading state
 
-  // --- NEW: Function to refresh all shared data ---
-  const refreshDashboardData = () => {
-    // Re-fetch the user data to get the latest credit
-    api.get('/me/').then(r => setUser(r.data));
-    // Re-fetch the game history to get the latest list of games
-    api.get('/games/history/').then(r => setGameHistory(r.data));
-  };
-
+  // --- CORRECTED: This effect now ONLY runs when the `token` changes ---
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
-      // When the app loads, fetch the initial data
-      refreshDashboardData();
-      setAuthed(true);
+      
+      // Fetch all initial data at once
+      Promise.all([
+        api.get('/me/'),
+        api.get('/games/history/')
+      ]).then(([userResponse, historyResponse]) => {
+        setUser(userResponse.data);
+        setGameHistory(historyResponse.data);
+        setAuthed(true);
+      }).catch(() => {
+        // If anything fails, log the user out
+        localStorage.removeItem('token');
+        setToken(null);
+        setAuthed(false);
+      }).finally(() => {
+        setIsLoading(false); // Stop loading when done
+      });
+    } else {
+      setIsLoading(false); // Not logged in, stop loading
     }
-  }, []);
+  }, []); // This still only runs once on initial load
 
-  function handleLogin({ token, user }) {
+  // --- NEW: A separate function to refresh data AFTER an action ---
+  const refreshDashboardData = () => {
+    api.get('/me/').then(r => setUser(r.data));
+    api.get('/games/history/').then(r => setGameHistory(r.data));
+  };
+  
+  function handleLogin({ token, user: loggedInUser }) {
     localStorage.setItem('token', token);
     setToken(token);
     setTokenState(token);
-    setUser(user);
-    refreshDashboardData(); // Fetch data after logging in
+    setUser(loggedInUser);
     setAuthed(true);
+    refreshDashboardData(); // Refresh data after logging in
   }
 
   function handleGameCreated(game, settings) {
     setCurrentGame(game);
     setGameSettings(settings);
     setView('runner');
-    refreshDashboardData(); // --- CRITICAL: Refresh data after creating a game ---
+    refreshDashboardData(); // Refresh data after creating a game
   }
   
   const handleNav = (newView) => {
     setView(newView);
     if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
+  
+  // --- Show a loading screen while we verify the token ---
+  if (isLoading) {
+    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Loading...</div>;
+  }
 
   if (!authed) {
     return <Login onLogin={handleLogin} />;
@@ -64,7 +83,6 @@ export default function App() {
   
   const renderMainApp = (mainContent) => (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
-      {/* Pass the fresh data down to the Sidebar */}
       <Sidebar 
         user={user} 
         gameHistory={gameHistory}
@@ -82,15 +100,4 @@ export default function App() {
       mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
       break;
     case 'runner':
-      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
-      break;
-    case 'report':
-      // Pass the fresh game history to the report page as well
-      mainContent = <TransactionHistory gameHistory={gameHistory} />;
-      break;
-    default:
-      mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
-  }
-
-  return renderMainApp(mainContent);
-}
+      mainContent = currentGame ? <GameR
