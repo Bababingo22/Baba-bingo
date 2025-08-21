@@ -61,7 +61,6 @@ export default function App() {
   
   const handleNav = (newView) => {
     setView(newView);
-    if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
   
   if (isLoading) {
@@ -72,7 +71,21 @@ export default function App() {
     return <Login onLogin={handleLogin} />;
   }
   
-  const renderMainApp = (mainContent) => (
+  // --- THIS IS THE CORRECTED RENDER LOGIC ---
+  if (view === 'runner' && currentGame) {
+    // If we are in the 'runner' view, render it as a full-screen component.
+    return <GameRunner 
+              game={currentGame} 
+              token={token} 
+              user={user}
+              callSpeed={gameSettings.callSpeed} 
+              audioLanguage={gameSettings.audioLanguage}
+              onNav={handleNav} // Pass the navigation function
+           />;
+  }
+
+  // For all other views ('create', 'report', etc.), render them with the main sidebar layout.
+  return (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
       <Sidebar 
         user={user} 
@@ -81,25 +94,10 @@ export default function App() {
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
-      <div className="flex-1 overflow-y-auto">{mainContent}</div>
+      <div className="flex-1 overflow-y-auto">
+        {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
+        {view === 'report' && <TransactionHistory />}
+      </div>
     </div>
   );
-
-  let mainContent;
-  switch (view) {
-    case 'create':
-      mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
-      break;
-    case 'runner':
-      // --- THIS IS THE CORRECTED LINE ---
-      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
-      break;
-    case 'report':
-      mainContent = <TransactionHistory />;
-      break;
-    default:
-      mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
-  }
-
-  return renderMainApp(mainContent);
 }
