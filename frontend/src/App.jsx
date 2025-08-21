@@ -28,18 +28,16 @@ export default function App() {
       setGameHistory(historyResponse.data);
     }).catch(error => {
       console.error("Failed to refresh dashboard data:", error);
-      // If fetching fails, it might be an auth issue, so log out
-      localStorage.removeItem('token');
-      setToken(null);
-      setAuthed(false);
     });
   };
 
+  // --- THIS IS THE CORRECTED AUTHENTICATION LOGIC ---
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
+      
       // First, verify the token by fetching the user.
       api.get('/me/')
         .then(userResponse => {
@@ -61,14 +59,14 @@ export default function App() {
         })
         .finally(() => {
           // --- ALWAYS RUNS ---
-          // No matter what, the loading process is over.
+          // No matter if it succeeded or failed, the loading process is over.
           setIsLoading(false);
         });
     } else {
       // If there's no token, we are not logged in and we are done loading.
       setIsLoading(false);
     }
-  }, []);
+  }, []); // The empty array ensures this effect only runs ONCE on app start
 
   function handleLogin({ token, user: loggedInUser }) {
     localStorage.setItem('token', token);
@@ -83,7 +81,7 @@ export default function App() {
     setCurrentGame(game);
     setGameSettings(settings);
     setView('runner');
-    refreshDashboardData(); // --- CRITICAL: Refresh data after creating a game ---
+    refreshDashboardData();
   }
   
   const handleNav = (newView) => {
@@ -98,9 +96,7 @@ export default function App() {
     return <Login onLogin={handleLogin} />;
   }
   
-  // --- THIS IS THE CORRECTED RENDER LOGIC ---
   if (view === 'runner' && currentGame) {
-    // If the view is 'runner', render the full-screen GameRunner component.
     return <GameRunner 
               game={currentGame} 
               token={token} 
@@ -111,7 +107,7 @@ export default function App() {
            />;
   }
 
-  // For all other views ('create', 'report'), render them with the main sidebar layout.
+  // All other views use the main sidebar layout
   return (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
       <Sidebar 
