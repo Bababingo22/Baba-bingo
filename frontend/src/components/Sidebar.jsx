@@ -14,7 +14,7 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
       {/* User Profile / Toggle Button */}
       <button 
         onClick={onToggle} 
-        className="flex items-center space-x-4 p-2 rounded-lg hover:bg-gray-700 w-full text-left mb-8"
+        className="flex items-center space-x-4 p-2 rounded-lg hover:bg-gray-700 w-full text-left mb-8 flex-shrink-0"
       >
         <div className="w-12 h-12 bg-gray-600 rounded-full flex-shrink-0 flex items-center justify-center text-xl font-bold">
           {user.username.charAt(0).toUpperCase()}
@@ -22,10 +22,8 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
         {isExpanded && <div><div className="font-bold text-lg">{user.username}</div></div>}
       </button>
 
-      {/* --- CORRECTED LAYOUT: Main Content Wrapper --- */}
-      {/* This container will hold all the content and the logout button */}
-      <div className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
-        
+      {/* Main Content (Scrollable and Collapsible) */}
+      <div className={`overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
         {/* Navigation */}
         <nav className="flex flex-col space-y-2 mb-8">
           <button onClick={() => onNav('create')} className="p-3 text-left bg-gray-700 rounded-md font-semibold">Dashboard</button>
@@ -62,19 +60,22 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
             </tbody>
           </table>
         </div>
+      </div>
 
-        {/* --- LOGOUT BUTTON (Corrected Position) --- */}
-        {/* It is now the last item in the main content flow, using mt-auto to push itself down only if there is extra space */}
-        <div className="mt-auto">
-          {isExpanded && (
-            <button 
-              onClick={handleLogout} 
-              className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
-            >
-              Log Out
-            </button>
-          )}
-        </div>
+      {/* --- THIS IS THE FIX --- */}
+      {/* This invisible div grows to fill all available space, pushing the logout button to the bottom */}
+      <div className="flex-grow"></div>
+
+      {/* Logout Button (now correctly positioned) */}
+      <div className="flex-shrink-0">
+        {isExpanded && (
+          <button 
+            onClick={handleLogout} 
+            className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
+          >
+            Log Out
+          </button>
+        )}
       </div>
     </div>
   );
