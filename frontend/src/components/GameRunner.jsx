@@ -43,13 +43,12 @@ const CardCheckModal = ({ cardData, calledNumbers, onClose }) => {
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
   return (
-    <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
+    <div className="bg-[#1e2b3a] p-4 rounded-lg h-full">
       <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
         <tbody>
           {headers.map((letter, rowIndex) => (
             <tr key={letter}>
-              {/* --- THIS IS THE STYLE CHANGE --- */}
-              {/* White background changed to blue, blue text changed to yellow */}
+              {/* Blue background with Yellow text for the letters */}
               <td className="w-12 bg-blue-600 text-yellow-400 font-bold text-2xl text-center rounded-md">{letter}</td>
               
               {Array.from({ length: 15 }).map((_, colIndex) => {
@@ -134,10 +133,12 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       <CardCheckModal cardData={cardDataForModal} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
         
+        {/* Top section (Number Grid) takes up 1 part of the space (~33%) */}
         <div className="flex-grow min-h-0"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
         
+        {/* Bottom section (Controls) takes up 2 parts of the space (~66%) */}
         <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
@@ -155,16 +156,15 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               <div className="text-7xl font-bold">{calledNumbers.size}</div>
             </div>
           </div>
-
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-start">
-                <div className="text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
-                <div className="bg-[#1e2b3a] p-4 rounded-lg">
-                    <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
-                    <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
-                        {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,6,8,12,16,18,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
-                    </div>
+              <div className="text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
+              <div className="bg-[#1e2b3a] p-4 rounded-lg">
+                <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
+                <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
+                  {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,6,8,12,16,18,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
                 </div>
+              </div>
             </div>
             <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
               <div className="flex items-center justify-center gap-3">
