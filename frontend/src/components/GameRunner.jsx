@@ -70,7 +70,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [isModalVisible, setIsModalVisible] = useState(false);
   const intervalRef = useRef(null);
   const [currentNumber, setCurrentNumber] = useState(null);
-  const [callHistory, setCallHistory] = useState([]);
+  // We no longer need callHistory state, so it has been removed.
 
   useEffect(() => {
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -82,7 +82,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       if (data.action === "call_number") {
         const newNumber = data.number;
         setCalledNumbers(prev => new Set(prev).add(newNumber));
-        setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
+        setCurrentNumber(newNumber); // Just set the current number
         setNextNumber(data.next_number);
         speakNumber(newNumber, audioLanguage);
       }
@@ -119,11 +119,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     <>
       <CardCheckModal cardData={cardDataForModal} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
       <div className="flex bg-[#0f172a] text-white h-screen">
-        <div className="w-20 bg-[#1e2b3a] p-4 flex flex-col items-center border-r border-gray-700">
-          <button onClick={() => onNav('create')} className="w-12 h-12 bg-gray-600 rounded-full flex-shrink-0 flex items-center justify-center text-xl font-bold hover:bg-gray-500">
-            {user.username.charAt(0).toUpperCase()}
-          </button>
-        </div>
+        
+        {/* --- LEFT COLUMN: Game Controls (User icon removed) --- */}
         <div className="w-64 flex flex-col gap-4 p-4 border-r border-gray-700">
           <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
             <div className="text-gray-400 font-semibold">Total Calls</div>
@@ -145,28 +142,27 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
               <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
             </div>
-            <button className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
+            <button onClick={() => onNav('create')} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
           </div>
         </div>
+
+        {/* --- RIGHT COLUMN: Main Content --- */}
         <div className="flex-1 flex flex-col gap-4 p-4">
           <NumberGrid calledNumbers={calledNumbers} />
-          <div className="flex items-center justify-between bg-[#1e2b3a] p-4 rounded-lg h-40">
-            <div className="flex items-center justify-center flex-grow">
-              {currentNumber ? (
-                <div className="w-32 h-32 rounded-full bg-yellow-400 border-4 border-white flex items-center justify-center shadow-lg"><span className="text-5xl font-bold text-black">{getBingoLetter(currentNumber)}{currentNumber}</span></div>
-              ) : (
-                <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center"><span className="text-xl text-gray-400">Press Resume</span></div>
-              )}
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2">
-              <div className="text-gray-400 font-semibold mb-2">PREVIOUS</div>
-              <div className="flex gap-2">
-                {callHistory.map((num, index) => (
-                  <div key={index} className="w-20 h-20 rounded-full bg-gray-800 border-2 border-red-500 flex items-center justify-center"><span className="text-3xl font-bold text-white">{getBingoLetter(num)}{num}</span></div>
-                ))}
+          
+          {/* --- Live Call Display (Previous numbers removed) --- */}
+          <div className="flex items-center justify-center bg-[#1e2b3a] p-4 rounded-lg h-40">
+            {currentNumber ? (
+              <div className="w-32 h-32 rounded-full bg-yellow-400 border-4 border-white flex items-center justify-center shadow-lg">
+                <span className="text-5xl font-bold text-black">{getBingoLetter(currentNumber)}{currentNumber}</span>
               </div>
-            </div>
+            ) : (
+              <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center">
+                <span className="text-xl text-gray-400">Press Resume</span>
+              </div>
+            )}
           </div>
+          
           <div className="text-center text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
         </div>
       </div>
