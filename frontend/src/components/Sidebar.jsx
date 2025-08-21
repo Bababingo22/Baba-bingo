@@ -22,7 +22,8 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
         {isExpanded && <div><div className="font-bold text-lg">{user.username}</div></div>}
       </button>
 
-      {/* Main Content (Scrollable and Collapsible) */}
+      {/* --- CORRECTED LAYOUT: Main Content Wrapper --- */}
+      {/* This container will hold all the content and the logout button */}
       <div className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
         
         {/* Navigation */}
@@ -48,7 +49,7 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
         </div>
 
         {/* Recent Games */}
-        <div className="flex-1">
+        <div className="mb-8">
           <h3 className="text-lg font-semibold text-gray-400 mb-4">Recent Games</h3>
           <table className="w-full text-sm text-left">
             <thead className="text-gray-400">
@@ -62,9 +63,9 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
           </table>
         </div>
 
-        {/* --- LOGOUT BUTTON (MOVED HERE) --- */}
-        {/* It is now inside the main scrolling container */}
-        <div className="mt-auto pt-4">
+        {/* --- LOGOUT BUTTON (Corrected Position) --- */}
+        {/* It is now the last item in the main content flow, using mt-auto to push itself down only if there is extra space */}
+        <div className="mt-auto">
           {isExpanded && (
             <button 
               onClick={handleLogout} 
