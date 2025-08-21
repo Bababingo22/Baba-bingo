@@ -65,7 +65,7 @@ const NumberGrid = ({ calledNumbers }) => {
   );
 };
 
-export default function GameRunner({ game, token, callSpeed, audioLanguage, onNav }) {
+export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [socket, setSocket] = useState(null);
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
   const [nextNumber, setNextNumber] = useState(null);
@@ -125,13 +125,11 @@ export default function GameRunner({ game, token, callSpeed, audioLanguage, onNa
       <CardCheckModal cardData={cardDataForModal} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
         
-        {/* --- TOP SECTION: Number Grid (takes up ~60% of the height) --- */}
-        <div className="flex-[3] min-h-0"> 
+        <div className="flex-grow min-h-0"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
         
-        {/* --- BOTTOM SECTION: Controls and Displays (takes up ~40% of the height) --- */}
-        <div className="flex-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
+        <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
@@ -148,15 +146,16 @@ export default function GameRunner({ game, token, callSpeed, audioLanguage, onNa
               <div className="text-7xl font-bold">{calledNumbers.size}</div>
             </div>
           </div>
+
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-start">
-              <div className="text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
-              <div className="bg-[#1e2b3a] p-4 rounded-lg">
-                <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
-                <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
-                  {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,12,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
+                <div className="text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
+                <div className="bg-[#1e2b3a] p-4 rounded-lg">
+                    <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
+                    <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
+                        {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,12,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
+                    </div>
                 </div>
-              </div>
             </div>
             <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
               <div className="flex items-center justify-center gap-3">
