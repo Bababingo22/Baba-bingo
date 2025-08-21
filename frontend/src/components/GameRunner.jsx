@@ -39,23 +39,29 @@ const CardCheckModal = ({ cardData, calledNumbers, onClose }) => {
   );
 };
 
+// --- THIS IS THE CORRECTED, COMPACT NUMBER GRID ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
-  const columns = headers.map((_, index) => Array.from({ length: 15 }, (_, i) => index * 15 + 1 + i));
   return (
-    <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
-      <div className="flex justify-around h-full">
-        {headers.map((header, colIndex) => (
-          <div key={header} className="flex flex-col items-center gap-1 w-1/5">
-            <div className="w-10 h-10 flex items-center justify-center text-2xl font-bold">{header}</div>
-            {columns[colIndex].map(num => (
-              <div key={num} className={`w-10 h-10 flex items-center justify-center text-md font-semibold rounded-full transition-colors ${calledNumbers.has(num) ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-300'}`}>
-                {num}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+    <div className="bg-[#1e2b3a] p-4 rounded-lg">
+      <table className="w-full border-separate" style={{ borderSpacing: '4px' }}>
+        <tbody>
+          {headers.map((letter, rowIndex) => (
+            <tr key={letter}>
+              <td className="w-12 bg-white text-blue-600 font-bold text-2xl text-center rounded-md">{letter}</td>
+              {Array.from({ length: 15 }).map((_, colIndex) => {
+                const num = rowIndex * 15 + colIndex + 1;
+                const isCalled = calledNumbers.has(num);
+                return (
+                  <td key={num} className={`text-center font-semibold text-lg transition-colors duration-300 ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>
+                    {num}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -118,36 +124,28 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   return (
     <>
       <CardCheckModal cardData={cardDataForModal} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
-      <div className="flex bg-[#0f172a] text-white p-4 gap-4 h-screen">
+      <div className="bg-[#0f172a] text-white h-screen grid grid-cols-[1fr_2fr] gap-4 p-4">
         
         {/* --- LEFT COLUMN: Game Controls --- */}
-        <div className="w-64 flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
+            <div className="text-gray-400 font-semibold">Next Number</div>
+            <div className="text-8xl font-bold">{nextNumber || '-'}</div>
+          </div>
+          <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
+          <div className="flex gap-2">
+            <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
+            <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
+          </div>
+          <button onClick={() => onNav('create')} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
+          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center mt-auto">
             <div className="text-gray-400 font-semibold">Total Calls</div>
             <div className="text-7xl font-bold">{calledNumbers.size}</div>
-          </div>
-          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
-            <div className="text-gray-400 font-semibold mb-2">Winning Pattern</div>
-            <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40 border-2 border-gray-600 p-1">
-              {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,12,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
-            </div>
-          </div>
-          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center flex-1 flex flex-col justify-center">
-            <div className="text-gray-400 font-semibold">Next Number</div>
-            <div className="text-8xl font-bold mt-4">{nextNumber || '-'}</div>
-          </div>
-          <div className="space-y-2">
-            <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
-            <div className="flex gap-2">
-              <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
-              <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
-            </div>
-            <button onClick={() => onNav('create')} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
           </div>
         </div>
 
         {/* --- RIGHT COLUMN: Main Content --- */}
-        <div className="flex-1 flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <NumberGrid calledNumbers={calledNumbers} />
           <div className="text-center text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
           <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
@@ -163,7 +161,14 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               )}
             </div>
           </div>
+          <div className="bg-[#1e2b3a] p-4 rounded-lg">
+            <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
+            <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
+              {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,12,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
+            </div>
+          </div>
         </div>
+
       </div>
     </>
   );
