@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import React from 'react';
 
 export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle }) {
 
@@ -23,15 +22,13 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
       </button>
 
       {/* Main Content (Scrollable and Collapsible) */}
-      <div className={`overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
-        {/* Navigation */}
+      <div className={`flex-1 overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
         <nav className="flex flex-col space-y-2 mb-8">
           <button onClick={() => onNav('create')} className="p-3 text-left bg-gray-700 rounded-md font-semibold">Dashboard</button>
           <button onClick={() => onNav('report')} className="p-3 text-left hover:bg-gray-700 rounded-md">Report</button>
           <button onClick={() => alert('Online Games coming soon!')} className="p-3 text-left hover:bg-gray-700 rounded-md">Online Games</button>
         </nav>
 
-        {/* Statistics */}
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-gray-400 mb-4">Statistics</h3>
           <div className="space-y-4">
@@ -46,8 +43,7 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
           </div>
         </div>
 
-        {/* Recent Games */}
-        <div className="mb-8">
+        <div>
           <h3 className="text-lg font-semibold text-gray-400 mb-4">Recent Games</h3>
           <table className="w-full text-sm text-left">
             <thead className="text-gray-400">
@@ -62,17 +58,10 @@ export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle
         </div>
       </div>
 
-      {/* --- THIS IS THE FIX --- */}
-      {/* This invisible div grows to fill all available space, pushing the logout button to the bottom */}
-      <div className="flex-grow"></div>
-
-      {/* Logout Button (now correctly positioned) */}
+      {/* Logout Button */}
       <div className="flex-shrink-0">
         {isExpanded && (
-          <button 
-            onClick={handleLogout} 
-            className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
-          >
+          <button onClick={handleLogout} className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600">
             Log Out
           </button>
         )}
