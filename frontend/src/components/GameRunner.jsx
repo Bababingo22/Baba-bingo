@@ -2,40 +2,41 @@ import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 
 // --- THIS IS THE CORRECTED, COMPACT NUMBER GRID ---
+// It uses a robust HTML table to create the gapless horizontal rows.
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
 
   return (
-    // The main container is now a flexbox column that doesn't grow to fill the screen
-    <div className="bg-[#1e2b3a] p-4 rounded-lg flex flex-col gap-2">
-      {headers.map((letter, rowIndex) => (
-        <div key={letter} className="flex items-center gap-3">
-          {/* White box for B-I-N-G-O letters */}
-          <div className="w-10 h-10 bg-white text-blue-600 font-bold text-xl flex-shrink-0 flex items-center justify-center rounded-md">
-            {letter}
-          </div>
-          {/* Horizontal row of numbers */}
-          <div className="flex-1 grid grid-cols-15 gap-2">
-            {Array.from({ length: 15 }, (_, colIndex) => {
-              const num = rowIndex * 15 + colIndex + 1;
-              const isCalled = calledNumbers.has(num);
-              return (
-                <div 
-                  key={num} 
-                  className={`w-full aspect-square flex items-center justify-center text-sm font-semibold transition-colors duration-300 ${
-                    isCalled ? 'text-white font-bold' : 'text-gray-600'
-                  }`}
-                >
-                  {num}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+    <div className="bg-[#1e2b3a] p-4 rounded-lg">
+      <table className="w-full border-separate" style={{ borderSpacing: '0 8px' }}> 
+        <tbody>
+          {headers.map((letter, rowIndex) => (
+            <tr key={letter}>
+              {/* White box for B-I-N-G-O letters */}
+              <td className="w-12 bg-white text-blue-600 font-bold text-2xl text-center rounded-l-md">{letter}</td>
+              
+              {Array.from({ length: 15 }).map((_, colIndex) => {
+                const num = rowIndex * 15 + colIndex + 1;
+                const isCalled = calledNumbers.has(num);
+                return (
+                  <td 
+                    key={num} 
+                    className={`text-center font-semibold text-lg transition-colors duration-300 ${
+                      isCalled ? 'text-white font-bold' : 'text-gray-600'
+                    }`}
+                  >
+                    {num}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
+
 
 // --- Main GameRunner with MINIMALIST LAYOUT ---
 export default function GameRunner({ game, token, callSpeed, audioLanguage }) {
