@@ -39,20 +39,29 @@ const CardCheckModal = ({ cardData, calledNumbers, onClose }) => {
   );
 };
 
+// --- THIS IS THE CORRECTED NUMBER GRID WITH THE NEW STYLE ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
   return (
-    <div className="bg-[#1e2b3a] p-4 rounded-lg h-full">
+    <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
       <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
         <tbody>
           {headers.map((letter, rowIndex) => (
             <tr key={letter}>
-              <td className="w-12 bg-white text-blue-600 font-bold text-2xl text-center rounded-md">{letter}</td>
+              {/* --- THIS IS THE STYLE CHANGE --- */}
+              {/* White background changed to blue, blue text changed to yellow */}
+              <td className="w-12 bg-blue-600 text-yellow-400 font-bold text-2xl text-center rounded-md">{letter}</td>
+              
               {Array.from({ length: 15 }).map((_, colIndex) => {
                 const num = rowIndex * 15 + colIndex + 1;
                 const isCalled = calledNumbers.has(num);
                 return (
-                  <td key={num} className={`text-center font-semibold text-lg transition-colors duration-300 ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>
+                  <td 
+                    key={num} 
+                    className={`text-center font-semibold text-lg transition-colors duration-300 ${
+                      isCalled ? 'text-white font-bold' : 'text-gray-600'
+                    }`}
+                  >
                     {num}
                   </td>
                 );
@@ -153,7 +162,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 <div className="bg-[#1e2b3a] p-4 rounded-lg">
                     <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
                     <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
-                        {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,12,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
+                        {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,6,8,12,16,18,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
                     </div>
                 </div>
             </div>
