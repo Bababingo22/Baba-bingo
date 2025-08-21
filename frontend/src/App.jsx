@@ -1,32 +1,47 @@
-import React, { useEffect, useState } from "react";
-import Login from "./components/Login";
-import CreateGameWizard from "./components/CreateGameWizard";
-import GameRunner from "./components/GameRunner";
-import Sidebar from "./components/Sidebar";
-import TransactionHistory from "./components/TransactionHistory";
-import api, { setToken } from "./services/api";
+import React, { useEffect, useState } from 'react';
+import Login from './components/Login';
+import CreateGameWizard from './components/CreateGameWizard';
+import GameRunner from './components/GameRunner';
+import Sidebar from './components/Sidebar';
+import TransactionHistory from './components/TransactionHistory';
+import api, { setToken } from './services/api';
 
 export default function App() {
   const [authed, setAuthed] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setTokenState] = useState(localStorage.getItem('token'));
-  const [view, setView] = useState("dashboard"); // Default to dashboard
+  const [view, setView] = useState('dashboard');
   const [currentGame, setCurrentGame] = useState(null);
   const [gameSettings, setGameSettings] = useState({});
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  
+  // This is the key to fixing the flicker
+  const [isLoading, setIsLoading] = useState(true);
 
-  // This effect runs once to check for an existing token
   useEffect(() => {
     const t = localStorage.getItem("token");
     if (t) {
       setToken(t);
-      api.get("/me/").then(r => {
-        setUser(r.data);
-        setAuthed(true);
-      }).catch(() => {
-        localStorage.removeItem("token");
-        setToken(null);
-      });
+      setTokenState(t);
+      api.get("/me/")
+        .then(r => {
+          // SUCCESS: The token is valid
+          setUser(r.data);
+          setAuthed(true);
+        })
+        .catch(() => {
+          // FAILURE: The token is invalid
+          localStorage.removeItem("token");
+          setToken(null);
+          setAuthed(false);
+        })
+        .finally(() => {
+          // ALWAYS RUNS: The check is complete
+          setIsLoading(false);
+        });
+    } else {
+      // No token exists, so we are done loading
+      setIsLoading(false);
     }
   }, []);
 
@@ -47,14 +62,21 @@ export default function App() {
   const handleNav = (newView) => {
     setView(newView);
   };
+
+  // --- THIS IS THE NEW RENDER LOGIC ---
   
-  if (!authed || !user) {
+  // 1. If we are still checking the token, show a loading screen.
+  if (isLoading) {
+    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>;
+  }
+
+  // 2. After loading, if we are not authenticated, show the login page.
+  if (!authed) {
     return <Login onLogin={handleLogin} />;
   }
-  
-  // --- FINAL RENDER LOGIC ---
+
+  // 3. If we are authenticated, show the correct application view.
   if (view === 'runner' && currentGame) {
-    // GameRunner is a full-page component
     return <GameRunner 
               game={currentGame} 
               token={token} 
@@ -65,7 +87,6 @@ export default function App() {
            />;
   }
 
-  // All other views use the main sidebar layout
   return (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
       <Sidebar 
