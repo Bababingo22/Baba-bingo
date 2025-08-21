@@ -15,16 +15,14 @@ export default function App() {
   const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [gameHistory, setGameHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(true); // Add a loading state
+  const [isLoading, setIsLoading] = useState(true);
 
-  // --- CORRECTED: This effect now ONLY runs when the `token` changes ---
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
       
-      // Fetch all initial data at once
       Promise.all([
         api.get('/me/'),
         api.get('/games/history/')
@@ -33,19 +31,17 @@ export default function App() {
         setGameHistory(historyResponse.data);
         setAuthed(true);
       }).catch(() => {
-        // If anything fails, log the user out
         localStorage.removeItem('token');
         setToken(null);
         setAuthed(false);
       }).finally(() => {
-        setIsLoading(false); // Stop loading when done
+        setIsLoading(false);
       });
     } else {
-      setIsLoading(false); // Not logged in, stop loading
+      setIsLoading(false);
     }
-  }, []); // This still only runs once on initial load
+  }, []);
 
-  // --- NEW: A separate function to refresh data AFTER an action ---
   const refreshDashboardData = () => {
     api.get('/me/').then(r => setUser(r.data));
     api.get('/games/history/').then(r => setGameHistory(r.data));
@@ -57,14 +53,14 @@ export default function App() {
     setTokenState(token);
     setUser(loggedInUser);
     setAuthed(true);
-    refreshDashboardData(); // Refresh data after logging in
+    refreshDashboardData();
   }
 
   function handleGameCreated(game, settings) {
     setCurrentGame(game);
     setGameSettings(settings);
     setView('runner');
-    refreshDashboardData(); // Refresh data after creating a game
+    refreshDashboardData();
   }
   
   const handleNav = (newView) => {
@@ -72,7 +68,6 @@ export default function App() {
     if (!isSidebarExpanded) setIsSidebarExpanded(true);
   };
   
-  // --- Show a loading screen while we verify the token ---
   if (isLoading) {
     return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
@@ -100,4 +95,14 @@ export default function App() {
       mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
       break;
     case 'runner':
-      mainContent = currentGame ? <GameR
+      mainContent = currentGame ? <GameRunner game={currentGame} token={token} callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage} /> : <CreateGameWizard onCreated={handleGameCreated} />;
+      break;
+    case 'report':
+      mainContent = <TransactionHistory />;
+      break;
+    default:
+      mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
+  }
+
+  return renderMainApp(mainContent);
+}
