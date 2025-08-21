@@ -17,6 +17,11 @@ export default function App() {
   const [gameHistory, setGameHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const refreshDashboardData = () => {
+    api.get('/me/').then(r => setUser(r.data));
+    api.get('/games/history/').then(r => setGameHistory(r.data));
+  };
+
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
@@ -37,11 +42,6 @@ export default function App() {
       setIsLoading(false);
     }
   }, []);
-
-  const refreshDashboardData = () => {
-    api.get('/me/').then(r => setUser(r.data));
-    api.get('/games/history/').then(r => setGameHistory(r.data));
-  };
   
   function handleLogin({ token, user: loggedInUser }) {
     localStorage.setItem('token', token);
@@ -71,20 +71,15 @@ export default function App() {
     return <Login onLogin={handleLogin} />;
   }
   
-  // --- THIS IS THE CORRECTED RENDER LOGIC ---
   if (view === 'runner' && currentGame) {
-    // If we are in the 'runner' view, render it as a full-screen component.
     return <GameRunner 
-              game={currentGame} 
-              token={token} 
-              user={user}
-              callSpeed={gameSettings.callSpeed} 
-              audioLanguage={gameSettings.audioLanguage}
-              onNav={handleNav} // Pass the navigation function
+              game={currentGame} token={token} user={user}
+              callSpeed={gameSettings.callSpeed} audioLanguage={gameSettings.audioLanguage}
+              onNav={handleNav}
            />;
   }
 
-  // For all other views ('create', 'report', etc.), render them with the main sidebar layout.
+  // All other views use the main sidebar layout
   return (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
       <Sidebar 
@@ -94,10 +89,10 @@ export default function App() {
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
-      <div className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto">
         {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
         {view === 'report' && <TransactionHistory />}
-      </div>
+      </main>
     </div>
   );
 }
