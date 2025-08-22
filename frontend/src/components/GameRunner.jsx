@@ -81,6 +81,9 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const intervalRef = useRef(null);
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
+  
+  // --- INJECTED: State for the countdown timer ---
+  const [countdown, setCountdown] = useState(callSpeed);
 
   const calculatePrize = () => {
     if (!game || !user || !game.active_card_numbers) return 0;
@@ -111,13 +114,28 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return () => { s.close(); if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [game.id, token, audioLanguage]);
 
+  // --- INJECTED: New useEffect hook for the countdown timer logic ---
   useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (!isPaused) {
-      intervalRef.current = setInterval(callNext, callSpeed * 1000);
+    if (isPaused || !socket) {
+      return;
     }
-    return () => clearInterval(intervalRef.current);
-  }, [isPaused, callSpeed]);
+
+    const timer = setInterval(() => {
+      setCountdown(prevCountdown => {
+        if (prevCountdown <= 1) {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ action: 'call_next' }));
+          }
+          return callSpeed; // Reset timer
+        }
+        return prevCountdown - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isPaused, callSpeed, socket]);
+
+  // The original useEffect for the interval is no longer needed and has been removed.
 
   function callNext() { if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ action: 'call_next' })); }
   function speakNumber(number, lang) {
@@ -148,7 +166,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
-              <div className="text-8xl font-bold">{nextNumber || '-'}</div>
+              {/* --- INJECTED: Display the live countdown --- */}
+              <div className="text-8xl font-bold">{countdown}</div>
             </div>
             <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
             <div className="flex gap-2">
@@ -162,13 +181,17 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
             </div>
           </div>
           <div className="flex flex-col gap-4">
-            
-            {/* --- WINNING PATTERN REMOVED --- */}
-            {/* The Prize display is now the main element */}
-            <div className="text-2xl font-bold text-green-400 text-center">
-              {prizeAmount} Birr ደራሽ
+            <div className="flex justify-between items-start">
+              <div className="text-2xl font-bold text-green-400">
+                {prizeAmount} Birr ደራሽ
+              </div>
+              <div className="bg-[#1e2b3a] p-4 rounded-lg">
+                <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
+                <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
+                  {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,6,8,12,16,18,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
+                </div>
+              </div>
             </div>
-
             <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
               <div className="flex items-center justify-center gap-3">
                 {callHistory.length > 0 ? (
@@ -187,4 +210,4 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       </div>
     </>
   );
-}
+}```
