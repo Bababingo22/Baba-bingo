@@ -5,9 +5,8 @@ from .views import (
     GameDetailView, 
     MyTokenObtainPairView, 
     CurrentUserView, 
-    PermanentCardDetailView, 
     GameHistoryView,
-    CheckWinView  # <-- Import the new view
+    CheckWinView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -19,8 +18,7 @@ urlpatterns = [
     path("games/history/", GameHistoryView.as_view(), name="game_history"),
     path("games/<int:pk>/", GameDetailView.as_view(), name="game_detail"),
     path("me/", CurrentUserView.as_view(), name="me"),
-    path("cards/<int:card_number>/", PermanentCardDetailView.as_view(), name="permanent_card_detail"),
 
-    # --- THIS IS THE NEW URL FOR THE WIN-CHECKER ---
+    # --- THIS IS THE FINAL, CORRECT URL FOR THE WIN-CHECKER ---
     path("check_win/<int:game_id>/<int:card_number>/", CheckWinView.as_view(), name="check_win"),
 ]
