@@ -82,24 +82,15 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
 
-  // --- INJECTED BUSINESS LOGIC START ---
   const calculatePrize = () => {
     if (!game || !user || !game.active_card_numbers) return 0;
-    
-    // 1. Total Pot = Bet Amount * Number of Cards
     const totalPot = game.amount * game.active_card_numbers.length;
-    
-    // 2. Commission Amount = Total Pot * Agent's Percentage
     const commissionAmount = totalPot * (user.commission_percentage / 100);
-    
-    // 3. Prize = Total Pot - Commission Amount
     const prize = totalPot - commissionAmount;
-    
-    return prize.toFixed(2); // Format to two decimal places
+    return prize.toFixed(2);
   };
 
   const prizeAmount = calculatePrize();
-  // --- INJECTED BUSINESS LOGIC END ---
 
   useEffect(() => {
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -171,20 +162,13 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
             </div>
           </div>
           <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-start">
-              
-              {/* --- INJECTED DISPLAY TEXT CHANGE --- */}
-              <div className="text-2xl font-bold text-green-400">
-                {prizeAmount} Birr ደራሽ
-              </div>
-
-              <div className="bg-[#1e2b3a] p-4 rounded-lg">
-                <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
-                <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
-                  {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,6,8,12,16,18,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
-                </div>
-              </div>
+            
+            {/* --- WINNING PATTERN REMOVED --- */}
+            {/* The Prize display is now the main element */}
+            <div className="text-2xl font-bold text-green-400 text-center">
+              {prizeAmount} Birr ደራሽ
             </div>
+
             <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
               <div className="flex items-center justify-center gap-3">
                 {callHistory.length > 0 ? (
