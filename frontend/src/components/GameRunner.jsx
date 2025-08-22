@@ -95,8 +95,9 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return prize.toFixed(2);
   })();
 
-  // This useEffect hook is ONLY for establishing and cleaning up the WebSocket connection.
+  // --- THIS IS THE ROBUST WEBSOCKET AND TIMER LOGIC ---
   useEffect(() => {
+    // Connect to WebSocket
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}/${apiHost}/ws/game/${game.id}/?token=${token}`;
@@ -109,15 +110,16 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
         speakText(String(newNumber), audioLanguage);
-        setCountdown(callSpeed);
+        setCountdown(callSpeed); // Reset countdown on new number
       }
     };
 
+    // Announce game start when the connection opens
     socketRef.current.onopen = () => {
         speakText("ጨዋታው ጀምሯል", audioLanguage);
     };
     
-    // Cleanup function: close the socket when the component is unmounted
+    // Cleanup function to close the connection when the component unmounts
     return () => {
       if (socketRef.current) {
         socketRef.current.close();
@@ -125,9 +127,9 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     };
   }, [game.id, token, audioLanguage, callSpeed]);
 
-  // This useEffect hook is ONLY for managing the countdown timer.
+  // A separate effect to handle the countdown timer
   useEffect(() => {
-    // If the game is paused, do nothing.
+    // Do nothing if the game is paused.
     if (isPaused) {
       return;
     }
@@ -135,7 +137,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const timerId = setInterval(() => {
       setCountdown(prevCountdown => {
         if (prevCountdown <= 1) {
-          // IMPORTANT: Check that the socket exists and is ready before sending a message.
+          // Check if the socket exists and is ready before sending a message.
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ action: 'call_next' }));
           }
@@ -147,7 +149,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
 
     // This cleanup function is essential to prevent multiple timers running.
     return () => clearInterval(timerId);
-  }, [isPaused, callSpeed]); // This effect re-runs only when the pause state or speed changes.
+  }, [isPaused, callSpeed]); // Re-run this effect only when the pause state or speed changes.
 
   function speakText(text, lang) {
     if (!('speechSynthesis' in window)) return;
