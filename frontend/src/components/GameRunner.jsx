@@ -10,7 +10,6 @@ const getBingoLetter = (number) => {
   return '';
 };
 
-// --- INJECTED CHANGE: This is the new, redesigned CardCheckModal ---
 const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   if (!checkResult || !checkResult.card_data) return null;
 
@@ -23,21 +22,17 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      {/* Increased width for a bigger modal */}
       <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-full max-w-lg">
         
-        {/* Header with Brand and Card Number */}
         <div className="text-center mb-4 p-3 rounded-lg bg-red-600">
           <h2 className="text-2xl font-bold text-white">Yaba Bingo</h2>
           <p className="text-white text-lg">Card Number: {card_number}</p>
         </div>
 
-        {/* Dynamic Win/Lose Message */}
         <div className={`text-center mb-4 p-3 rounded-lg ${is_winner ? 'bg-green-500' : 'bg-gray-700'}`}>
           <h2 className="text-4xl font-bold text-white">{is_winner ? 'ዘግቷል' : 'አልዘጋም'}</h2>
         </div>
         
-        {/* Larger table and text */}
         <table className="w-full border-separate" style={{ borderSpacing: '6px' }}>
           <thead>
             <tr>{headers.map((h, i) => <th key={h} className={`w-1/5 text-center text-xl font-bold p-2 text-white rounded-md ${colors[i]}`}>{h}</th>)}</tr>
@@ -174,10 +169,16 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
             </div>
             <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
-            <div className="flex gap-2">
-              <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
-              <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
+            
+            {/* --- INJECTED CHANGE START --- */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
+                <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
+              </div>
             </div>
+            {/* --- INJECTED CHANGE END --- */}
+
             <button onClick={() => onNav('create')} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center mt-auto">
               <div className="text-gray-400 font-semibold">Total Calls</div>
