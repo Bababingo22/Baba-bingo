@@ -84,7 +84,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   
-  // Use a ref for the WebSocket object
+  // Use a ref for the WebSocket to prevent re-renders from affecting it
   const socketRef = useRef(null);
 
   const prizeAmount = (() => {
@@ -95,9 +95,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return prize.toFixed(2);
   })();
 
-  // --- INJECTED CHANGE START: Robust WebSocket and Timer Logic ---
+  // This useEffect hook is ONLY for establishing and cleaning up the WebSocket connection.
   useEffect(() => {
-    // Connect to WebSocket
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}/${apiHost}/ws/game/${game.id}/?token=${token}`;
@@ -117,7 +116,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     socketRef.current.onopen = () => {
         speakText("ጨዋታው ጀምሯል", audioLanguage);
     };
-
+    
+    // Cleanup function: close the socket when the component is unmounted
     return () => {
       if (socketRef.current) {
         socketRef.current.close();
@@ -125,7 +125,9 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     };
   }, [game.id, token, audioLanguage, callSpeed]);
 
+  // This useEffect hook is ONLY for managing the countdown timer.
   useEffect(() => {
+    // If the game is paused, do nothing.
     if (isPaused) {
       return;
     }
@@ -133,23 +135,26 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const timerId = setInterval(() => {
       setCountdown(prevCountdown => {
         if (prevCountdown <= 1) {
+          // IMPORTANT: Check that the socket exists and is ready before sending a message.
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ action: 'call_next' }));
           }
-          return 0;
+          return 0; // The countdown will be properly reset by the onmessage handler.
         }
         return prevCountdown - 1;
       });
     }, 1000);
 
+    // This cleanup function is essential to prevent multiple timers running.
     return () => clearInterval(timerId);
-  }, [isPaused, callSpeed]); // Re-run only when pause state or speed changes
-  // --- INJECTED CHANGE END ---
-  
+  }, [isPaused, callSpeed]); // This effect re-runs only when the pause state or speed changes.
+
   function speakText(text, lang) {
     if (!('speechSynthesis' in window)) return;
     const msg = new SpeechSynthesisUtterance(text);
-    if (lang === 'Amharic Male' || lang === 'Amharic Female') msg.lang = 'am-ET';
+    if (lang === 'Amharic Male' || lang === 'Amharic Female') {
+      msg.lang = 'am-ET';
+    }
     window.speechSynthesis.speak(msg);
   }
 
@@ -165,6 +170,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   }
   
   const handleEndGame = () => {
+    setIsPaused(true); // Pause the timer before ending
     speakText("ጨዋታው ቋሞል", audioLanguage);
     setTimeout(() => {
       onNav('create');
