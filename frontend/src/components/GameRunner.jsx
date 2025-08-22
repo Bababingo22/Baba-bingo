@@ -88,7 +88,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const prize = totalPot - commissionAmount;
     return prize.toFixed(2);
   };
-
   const prizeAmount = calculatePrize();
 
   useEffect(() => {
@@ -112,25 +111,33 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return () => { s.close(); };
   }, [game.id, token, audioLanguage, callSpeed]);
 
+  // --- THIS IS THE ROBUST COUNTDOWN TIMER LOGIC ---
   useEffect(() => {
-    if (isPaused || !socket) {
+    // If the game is paused, do nothing.
+    if (isPaused) {
       return;
     }
     
+    // Set up an interval that ticks every second.
     const timerId = setInterval(() => {
       setCountdown(prevCountdown => {
+        // When countdown hits 1, it's time to call the next number.
         if (prevCountdown <= 1) {
           if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ action: 'call_next' }));
           }
-          return 0;
+          // The countdown will be properly reset by the onmessage handler.
+          return 0; 
         }
+        // Otherwise, just subtract 1.
         return prevCountdown - 1;
       });
     }, 1000);
 
+    // This is a cleanup function. It runs when the component re-renders or unmounts.
+    // It is essential to prevent multiple timers running at once.
     return () => clearInterval(timerId);
-  }, [isPaused, socket]);
+  }, [isPaused, socket]); // This effect only re-runs when the game is paused/resumed.
 
   function speakNumber(number, lang) {
     if (!('speechSynthesis' in window)) return;
@@ -161,6 +168,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
+              {/* This now correctly displays the live countdown */}
               <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
             </div>
             <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
