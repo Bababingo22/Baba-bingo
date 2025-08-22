@@ -52,8 +52,8 @@ const NumberGrid = ({ calledNumbers }) => {
                 const num = rowIndex * 15 + colIndex + 1;
                 const isCalled = calledNumbers.has(num);
                 return (
-                  <td 
-                    key={num} 
+                  <td
+                    key={num}
                     className={`text-center font-semibold text-lg transition-colors duration-300 ${
                       isCalled ? 'text-white font-bold' : 'text-gray-600'
                     }`}
@@ -79,8 +79,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
-  
-  // --- STATE FOR THE COUNTDOWN TIMER ---
   const [countdown, setCountdown] = useState(callSpeed);
 
   const calculatePrize = () => {
@@ -90,6 +88,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const prize = totalPot - commissionAmount;
     return prize.toFixed(2);
   };
+
   const prizeAmount = calculatePrize();
 
   useEffect(() => {
@@ -105,41 +104,33 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
         speakNumber(newNumber, audioLanguage);
-        // When a number is called, reset the countdown for the next number
         setCountdown(callSpeed);
       }
     };
     setSocket(s);
     
     return () => { s.close(); };
-  }, [game.id, token, audioLanguage, callSpeed]); // Added callSpeed to dependencies
+  }, [game.id, token, audioLanguage, callSpeed]);
 
-  // --- THIS IS THE CORRECTED COUNTDOWN LOGIC ---
   useEffect(() => {
-    // Do nothing if the game is paused.
-    if (isPaused) {
+    if (isPaused || !socket) {
       return;
     }
     
-    // Set up an interval that ticks every 1 second.
     const timerId = setInterval(() => {
       setCountdown(prevCountdown => {
-        // When the countdown reaches 1, call the next number.
         if (prevCountdown <= 1) {
           if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ action: 'call_next' }));
           }
-          // The countdown will be reset by the onmessage handler when the number arrives.
-          return 0; 
+          return 0;
         }
-        // Otherwise, just count down by 1.
         return prevCountdown - 1;
       });
     }, 1000);
 
-    // Cleanup function to clear the interval.
     return () => clearInterval(timerId);
-  }, [isPaused, socket]); // This effect only depends on the paused state and the socket connection.
+  }, [isPaused, socket]);
 
   function speakNumber(number, lang) {
     if (!('speechSynthesis' in window)) return;
@@ -170,7 +161,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
-              {/* This now displays the live countdown */}
               <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
             </div>
             <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
@@ -185,16 +175,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
             </div>
           </div>
           <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-start">
-              <div className="text-2xl font-bold text-green-400">
-                {prizeAmount} Birr ደራሽ
-              </div>
-              <div className="bg-[#1e2b3a] p-4 rounded-lg">
-                <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
-                <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
-                  {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,6,8,12,16,18,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
-                </div>
-              </div>
+            <div className="text-2xl font-bold text-green-400 text-center">
+              {prizeAmount} Birr ደራሽ
             </div>
             <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
               <div className="flex items-center justify-center gap-3">
