@@ -39,7 +39,6 @@ const CardCheckModal = ({ cardData, calledNumbers, onClose }) => {
   );
 };
 
-// --- THIS IS THE CORRECTED NUMBER GRID WITH THE NEW STYLE ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
   return (
@@ -48,9 +47,7 @@ const NumberGrid = ({ calledNumbers }) => {
         <tbody>
           {headers.map((letter, rowIndex) => (
             <tr key={letter}>
-              {/* Blue background with Yellow text for the letters */}
               <td className="w-12 bg-blue-600 text-yellow-400 font-bold text-2xl text-center rounded-md">{letter}</td>
-              
               {Array.from({ length: 15 }).map((_, colIndex) => {
                 const num = rowIndex * 15 + colIndex + 1;
                 const isCalled = calledNumbers.has(num);
@@ -84,6 +81,25 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const intervalRef = useRef(null);
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
+
+  // --- INJECTED BUSINESS LOGIC START ---
+  const calculatePrize = () => {
+    if (!game || !user || !game.active_card_numbers) return 0;
+    
+    // 1. Total Pot = Bet Amount * Number of Cards
+    const totalPot = game.amount * game.active_card_numbers.length;
+    
+    // 2. Commission Amount = Total Pot * Agent's Percentage
+    const commissionAmount = totalPot * (user.commission_percentage / 100);
+    
+    // 3. Prize = Total Pot - Commission Amount
+    const prize = totalPot - commissionAmount;
+    
+    return prize.toFixed(2); // Format to two decimal places
+  };
+
+  const prizeAmount = calculatePrize();
+  // --- INJECTED BUSINESS LOGIC END ---
 
   useEffect(() => {
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -133,12 +149,10 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       <CardCheckModal cardData={cardDataForModal} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
         
-        {/* Top section (Number Grid) takes up 1 part of the space (~33%) */}
         <div className="flex-grow min-h-0"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
         
-        {/* Bottom section (Controls) takes up 2 parts of the space (~66%) */}
         <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
@@ -158,7 +172,12 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
           </div>
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-start">
-              <div className="text-2xl font-bold text-green-400">የእርስዎ 24Birr</div>
+              
+              {/* --- INJECTED DISPLAY TEXT CHANGE --- */}
+              <div className="text-2xl font-bold text-green-400">
+                {prizeAmount} Birr ደራሽ
+              </div>
+
               <div className="bg-[#1e2b3a] p-4 rounded-lg">
                 <div className="text-gray-400 font-semibold mb-2 text-center">Winning Pattern</div>
                 <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
