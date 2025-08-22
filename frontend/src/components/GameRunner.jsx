@@ -79,6 +79,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
   const [countdown, setCountdown] = useState(callSpeed);
+  
+  // This state now holds the full result from the backend
   const [checkResult, setCheckResult] = useState(null);
 
   const prizeAmount = (() => {
@@ -111,19 +113,17 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   }, [game.id, token, audioLanguage, callSpeed]);
 
   useEffect(() => {
-    if (isPaused || !socket) {
-      return;
-    }
+    if (isPaused || !socket) return;
     
     const timerId = setInterval(() => {
-      setCountdown(prevCountdown => {
-        if (prevCountdown <= 1) {
+      setCountdown(prev => {
+        if (prev <= 1) {
           if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ action: 'call_next' }));
           }
           return 0;
         }
-        return prevCountdown - 1;
+        return prev - 1;
       });
     }, 1000);
 
@@ -137,11 +137,13 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     window.speechSynthesis.speak(msg);
   }
 
+  // --- THIS IS THE CORRECTED FUNCTION ---
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
     try {
+      // It now calls the correct endpoint with the game ID
       const response = await api.get(`/check_win/${game.id}/${cardNumberToCheck}/`);
-      setCheckResult(response.data);
+      setCheckResult(response.data); // Store the full result
       setIsModalVisible(true);
     } catch (error) {
       alert(`Error: ${error.response?.data?.detail || 'Card not found.'}`);
