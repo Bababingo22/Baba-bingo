@@ -1,8 +1,13 @@
 from django.urls import path
 from .views import (
-    TransactionListView, CreateGameView, GameDetailView, 
-    MyTokenObtainPairView, CurrentUserView, PermanentCardDetailView, 
-    GameHistoryView
+    TransactionListView, 
+    CreateGameView, 
+    GameDetailView, 
+    MyTokenObtainPairView, 
+    CurrentUserView, 
+    PermanentCardDetailView, 
+    GameHistoryView,
+    CheckWinView  # <-- Import the new view
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -15,4 +20,7 @@ urlpatterns = [
     path("games/<int:pk>/", GameDetailView.as_view(), name="game_detail"),
     path("me/", CurrentUserView.as_view(), name="me"),
     path("cards/<int:card_number>/", PermanentCardDetailView.as_view(), name="permanent_card_detail"),
+
+    # --- THIS IS THE NEW URL FOR THE WIN-CHECKER ---
+    path("check_win/<int:game_id>/<int:card_number>/", CheckWinView.as_view(), name="check_win"),
 ]
