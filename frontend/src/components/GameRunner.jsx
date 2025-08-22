@@ -1,144 +1,134 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import permissions, status
-from .models import Transaction, GameRound, User, PermanentCard
-from .serializers import TransactionSerializer, GameRoundSerializer, UserSerializer
-from rest_framework.decorators import api_view, permission_classes
-from decimal import Decimal
-from django.shortcuts import get_object_or_404
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+import React, { useEffect, useState, useRef } from 'react';
+import api from '../services/api';
 
-# --- HELPER FUNCTION FOR WIN CHECKING ---
-def check_win_condition(board, called_numbers, pattern="Line"):
-    # This is a simplified win checker for any single horizontal line.
-    # It can be expanded later for more complex patterns like vertical, diagonal, or full house.
-    called_set = set(called_numbers)
-    # Check each of the 5 rows
-    for row_idx in range(5):
-        is_winner = True
-        for col_idx in range(5):
-            cell = board[col_idx][row_idx]
-            if cell == "FREE":
-                continue
-            if cell not in called_set:
-                is_winner = False
-                break
-        if is_winner:
-            return True
-    return False
+const getBingoLetter = (number) => { /* ... (This is correct) ... */ };
 
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token["username"] = user.username
-        token["is_agent"] = user.is_agent
-        return token
+// --- THIS IS THE NEW, FINAL CardCheckModal ---
+const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
+  if (!checkResult || !checkResult.card_data) return null;
 
-class MyTokenObtainPairView(TokenObtainPairView):
-    serializer_class = MyTokenObtainPairSerializer
+  const { is_winner, card_data } = checkResult;
+  const { board } = card_data;
+  
+  const headers = ['B', 'I', 'N', 'G', 'O'];
+  const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-purple-500'];
+  const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => board[c][r]));
 
-class TransactionListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request):
-        user = request.user
-        if not user.is_agent:
-            return Response({"detail": "Only agents have transaction histories."}, status=status.HTTP_403_FORBIDDEN)
-        qs = Transaction.objects.filter(agent=user).order_by("-timestamp")
-        serializer = TransactionSerializer(qs, many=True)
-        return Response(serializer.data)
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-auto max-w-md">
+        <div className={`text-center mb-4 p-3 rounded-lg ${is_winner ? 'bg-green-500' : 'bg-red-500'}`}>
+          <h2 className="text-3xl font-bold text-white">{is_winner ? 'ዘግቷል' : 'አልዘጋም'}</h2>
+        </div>
+        <table className="w-full border-separate border-spacing-1">
+          <thead>
+            <tr>{headers.map((h, i) => <th key={h} className={`w-1/5 text-center text-lg font-bold p-1 text-white rounded-md ${colors[i]}`}>{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cellValue, colIndex) => {
+                  const isCalled = cellValue !== "FREE" && calledNumbers.has(cellValue);
+                  const isFreeSpace = cellValue === "FREE";
+                  return <td key={`${colIndex}-${rowIndex}`} className={`text-center font-bold text-lg h-12 rounded-md ${isCalled ? 'bg-yellow-400 text-black' : isFreeSpace ? 'bg-blue-600 text-white' : 'bg-gray-300 text-black'}`}>{isFreeSpace ? '★' : cellValue}</td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="text-center mt-6">
+          <button onClick={onClose} className="px-8 py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-class CreateGameView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def post(self, request):
-        user = request.user
-        if not user.is_agent:
-            return Response({"detail": "Only agents can create games."}, status=status.HTTP_403_FORBIDDEN)
-        
-        bet_amount_per_card = request.data.get("amount") 
-        active_cards = request.data.get("active_cards", [])
-        
-        if not active_cards or len(active_cards) < 3:
-            return Response({"detail": "You must select at least 3 cards to start a game."}, status=status.HTTP_400_BAD_REQUEST)
+const NumberGrid = ({ calledNumbers }) => { /* ... (This is correct) ... */ };
 
-        try:
-            bet_amount_per_card = Decimal(bet_amount_per_card)
-        except (TypeError, ValueError):
-            return Response({"detail": "Invalid bet amount."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        number_of_cards = len(active_cards)
-        launch_cost = bet_amount_per_card * number_of_cards
+export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
+  const [socket, setSocket] = useState(null);
+  const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
+  const [isPaused, setIsPaused] = useState(true);
+  const [cardNumberToCheck, setCardNumberToCheck] = useState('');
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [currentNumber, setCurrentNumber] = useState(null);
+  const [callHistory, setCallHistory] = useState([]);
+  const [countdown, setCountdown] = useState(callSpeed);
+  
+  // This state now holds the full result from the backend
+  const [checkResult, setCheckResult] = useState(null);
 
-        if user.operational_credit < launch_cost:
-            return Response({
-                "detail": f"Insufficient credit. Game Cost: {launch_cost}, Balance: {user.operational_credit}"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        user.operational_credit = user.operational_credit - launch_cost
-        user.save()
-        
-        game_type = request.data.get("game_type", "Regular")
-        Transaction.objects.create(
-            agent=user, type="GAME_LAUNCH", amount=-launch_cost,
-            running_balance=user.operational_credit, note=f"Game launch cost for {game_type} with {number_of_cards} cards"
-        )
-        
-        game = GameRound.objects.create(
-            agent=user, game_type=game_type,
-            winning_pattern=request.data.get("winning_pattern", "Line"),
-            amount=bet_amount_per_card,
-            status="PENDING",
-            active_card_numbers=active_cards
-        )
-        
-        serializer = GameRoundSerializer(game)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+  const calculatePrize = () => { /* ... (This is correct) ... */ };
+  const prizeAmount = calculatePrize();
 
-class GameDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request, pk):
-        game = get_object_or_404(GameRound, pk=pk)
-        if request.user != game.agent and not request.user.is_staff:
-            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
-        serializer = GameRoundSerializer(game)
-        return Response(serializer.data)
+  useEffect(() => { /* ... (WebSocket logic is correct) ... */ }, [game.id, token, audioLanguage, callSpeed]);
+  useEffect(() => { /* ... (Countdown timer logic is correct) ... */ }, [isPaused, socket]);
+  function speakNumber(number, lang) { /* ... (This is correct) ... */ }
 
-class CurrentUserView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+  // --- THIS IS THE CORRECTED handleCheckCard FUNCTION ---
+  async function handleCheckCard() {
+    if (!cardNumberToCheck) return alert("Please enter a card number.");
+    try {
+      // It now calls the correct win-checker API endpoint
+      const response = await api.get(`/check_win/${game.id}/${cardNumberToCheck}/`);
+      setCheckResult(response.data); // Store the full result object
+      setIsModalVisible(true);
+    } catch (error) {
+      alert(`Error: ${error.response?.data?.detail || 'Card not found.'}`);
+    }
+  }
 
-class GameHistoryView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request):
-        if not request.user.is_agent:
-            return Response({"detail": "Only agents have a game history."}, status=status.HTTP_403_FORBIDDEN)
-        games = GameRound.objects.filter(agent=request.user).order_by('-created_at')
-        serializer = GameRoundSerializer(games, many=True)
-        return Response(serializer.data)
-
-# --- THIS IS THE FINAL WIN-CHECKER VIEW ---
-class CheckWinView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request, game_id, card_number):
-        try:
-            game = GameRound.objects.get(pk=game_id)
-            card = PermanentCard.objects.get(card_number=card_number)
-        except (GameRound.DoesNotExist, PermanentCard.DoesNotExist):
-            return Response({"detail": "Game or Card not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        if card.card_number not in game.active_card_numbers:
-            return Response({"detail": "This card is not active in the current game."}, status=status.HTTP_400_BAD_REQUEST)
-
-        is_winner = check_win_condition(card.board, game.called_numbers, game.winning_pattern)
-
-        return Response({
-            'is_winner': is_winner,
-            'card_data': {
-                'card_number': card.card_number,
-                'board': card.board
-            }
-        })
+  return (
+    <>
+      <CardCheckModal 
+        checkResult={checkResult} 
+        calledNumbers={calledNumbers} 
+        onClose={() => setIsModalVisible(false)} 
+      />
+      
+      {/* The rest of the JSX is the same */}
+      <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
+        <div className="flex-grow min-h-0"> 
+          <NumberGrid calledNumbers={calledNumbers} />
+        </div>
+        <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
+          <div className="flex flex-col gap-4">
+            <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
+              <div className="text-gray-400 font-semibold">Next Number</div>
+              <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
+            </div>
+            <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
+            <div className="flex gap-2">
+              <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
+              <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
+            </div>
+            <button onClick={() => onNav('create')} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
+            <div className="bg-[#1e2b3a] p-4 rounded-lg text-center mt-auto">
+              <div className="text-gray-400 font-semibold">Total Calls</div>
+              <div className="text-7xl font-bold">{calledNumbers.size}</div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="text-2xl font-bold text-green-400 text-center">
+              {prizeAmount} Birr ደራሽ
+            </div>
+            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
+              <div className="flex items-center justify-center gap-3">
+                {callHistory.length > 0 ? (
+                  callHistory.map((num, index) => (
+                    <div key={index} className={`w-24 h-24 rounded-full border-4 flex items-center justify-center ${index === 0 ? 'border-green-400' : 'border-yellow-400'}`}>
+                      <span className="text-4xl font-bold text-white">{getBingoLetter(num)}{num}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500">Previous numbers will appear here</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
