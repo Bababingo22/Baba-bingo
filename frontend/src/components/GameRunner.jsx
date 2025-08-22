@@ -75,18 +75,17 @@ const NumberGrid = ({ calledNumbers }) => {
 };
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
-  const [socket, setSocket] = useState(null);
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
-  
-  // --- INJECTED CHANGE: Game starts in a playing state ---
   const [isPaused, setIsPaused] = useState(false);
-  
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
+  
+  // Use a ref for the WebSocket object
+  const socketRef = useRef(null);
 
   const prizeAmount = (() => {
     if (!game || !user || !game.active_card_numbers) return '0.00';
@@ -96,13 +95,15 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return prize.toFixed(2);
   })();
 
+  // --- INJECTED CHANGE START: Robust WebSocket and Timer Logic ---
   useEffect(() => {
+    // Connect to WebSocket
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}/${apiHost}/ws/game/${game.id}/?token=${token}`;
-    const s = new WebSocket(url);
-    
-    s.onmessage = (ev) => {
+    socketRef.current = new WebSocket(url);
+
+    socketRef.current.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
         const newNumber = data.number;
@@ -112,33 +113,39 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         setCountdown(callSpeed);
       }
     };
-    setSocket(s);
-    
-    // --- INJECTED CHANGE: Announce game start on load ---
-    speakText("ጨዋታው ጀምሯል", audioLanguage);
-    
-    return () => { s.close(); };
+
+    socketRef.current.onopen = () => {
+        speakText("ጨዋታው ጀምሯል", audioLanguage);
+    };
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+    };
   }, [game.id, token, audioLanguage, callSpeed]);
 
   useEffect(() => {
-    if (isPaused || !socket) return;
+    if (isPaused) {
+      return;
+    }
     
     const timerId = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ action: 'call_next' }));
+      setCountdown(prevCountdown => {
+        if (prevCountdown <= 1) {
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(JSON.stringify({ action: 'call_next' }));
           }
           return 0;
         }
-        return prev - 1;
+        return prevCountdown - 1;
       });
     }, 1000);
 
     return () => clearInterval(timerId);
-  }, [isPaused, socket]);
-
-  // --- INJECTED CHANGE: A more generic speech function ---
+  }, [isPaused, callSpeed]); // Re-run only when pause state or speed changes
+  // --- INJECTED CHANGE END ---
+  
   function speakText(text, lang) {
     if (!('speechSynthesis' in window)) return;
     const msg = new SpeechSynthesisUtterance(text);
@@ -157,7 +164,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     }
   }
   
-  // --- INJECTED CHANGE: New handler for the End Game button ---
   const handleEndGame = () => {
     speakText("ጨዋታው ቋሞል", audioLanguage);
     setTimeout(() => {
