@@ -10,23 +10,37 @@ const getBingoLetter = (number) => {
   return '';
 };
 
+// --- INJECTED CHANGE: This is the new, redesigned CardCheckModal ---
 const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   if (!checkResult || !checkResult.card_data) return null;
+
   const { is_winner, card_data } = checkResult;
-  const { board } = card_data;
+  const { card_number, board } = card_data;
+  
   const headers = ['B', 'I', 'N', 'G', 'O'];
-  const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-purple-500'];
+  const colors = ['bg-blue-500', 'bg-red-500', 'bg-orange-400', 'bg-green-500', 'bg-purple-500'];
   const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => board[c][r]));
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-auto max-w-md">
-        <div className={`text-center mb-4 p-3 rounded-lg ${is_winner ? 'bg-green-500' : 'bg-red-500'}`}>
-          <h2 className="text-3xl font-bold text-white">{is_winner ? 'ዘግቷል' : 'አልዘጋም'}</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      {/* Increased width for a bigger modal */}
+      <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-full max-w-lg">
+        
+        {/* Header with Brand and Card Number */}
+        <div className="text-center mb-4 p-3 rounded-lg bg-red-600">
+          <h2 className="text-2xl font-bold text-white">Yaba Bingo</h2>
+          <p className="text-white text-lg">Card Number: {card_number}</p>
         </div>
-        <table className="w-full border-separate border-spacing-1">
+
+        {/* Dynamic Win/Lose Message */}
+        <div className={`text-center mb-4 p-3 rounded-lg ${is_winner ? 'bg-green-500' : 'bg-gray-700'}`}>
+          <h2 className="text-4xl font-bold text-white">{is_winner ? 'ዘግቷል' : 'አልዘጋም'}</h2>
+        </div>
+        
+        {/* Larger table and text */}
+        <table className="w-full border-separate" style={{ borderSpacing: '6px' }}>
           <thead>
-            <tr>{headers.map((h, i) => <th key={h} className={`w-1/5 text-center text-lg font-bold p-1 text-white rounded-md ${colors[i]}`}>{h}</th>)}</tr>
+            <tr>{headers.map((h, i) => <th key={h} className={`w-1/5 text-center text-xl font-bold p-2 text-white rounded-md ${colors[i]}`}>{h}</th>)}</tr>
           </thead>
           <tbody>
             {rows.map((row, rowIndex) => (
@@ -34,14 +48,14 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
                 {row.map((cellValue, colIndex) => {
                   const isCalled = cellValue !== "FREE" && calledNumbers.has(cellValue);
                   const isFreeSpace = cellValue === "FREE";
-                  return <td key={`${colIndex}-${rowIndex}`} className={`text-center font-bold text-lg h-12 rounded-md ${isCalled ? 'bg-yellow-400 text-black' : isFreeSpace ? 'bg-blue-600 text-white' : 'bg-gray-300 text-black'}`}>{isFreeSpace ? '★' : cellValue}</td>;
+                  return <td key={`${colIndex}-${rowIndex}`} className={`text-center font-bold text-2xl h-16 rounded-md ${isCalled ? 'bg-yellow-400 text-black' : isFreeSpace ? 'bg-blue-600 text-white' : 'bg-gray-300 text-black'}`}>{isFreeSpace ? '★' : cellValue}</td>;
                 })}
               </tr>
             ))}
           </tbody>
         </table>
         <div className="text-center mt-6">
-          <button onClick={onClose} className="px-8 py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700">Cancel</button>
+          <button onClick={onClose} className="px-10 py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700">Cancel</button>
         </div>
       </div>
     </div>
@@ -79,8 +93,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
   const [countdown, setCountdown] = useState(callSpeed);
-  
-  // This state now holds the full result from the backend
   const [checkResult, setCheckResult] = useState(null);
 
   const prizeAmount = (() => {
@@ -137,13 +149,11 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     window.speechSynthesis.speak(msg);
   }
 
-  // --- THIS IS THE CORRECTED FUNCTION ---
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
     try {
-      // It now calls the correct endpoint with the game ID
       const response = await api.get(`/check_win/${game.id}/${cardNumberToCheck}/`);
-      setCheckResult(response.data); // Store the full result
+      setCheckResult(response.data);
       setIsModalVisible(true);
     } catch (error) {
       alert(`Error: ${error.response?.data?.detail || 'Card not found.'}`);
