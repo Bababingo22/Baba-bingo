@@ -1,7 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 
-const getBingoLetter = (number) => { /* ... (This is correct) ... */ };
+const getBingoLetter = (number) => {
+  if (number >= 1 && number <= 15) return 'B';
+  if (number >= 16 && number <= 30) return 'I';
+  if (number >= 31 && number <= 45) return 'N';
+  if (number >= 46 && number <= 60) return 'G';
+  if (number >= 61 && number <= 75) return 'O';
+  return '';
+};
 
 const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   if (!checkResult || !checkResult.card_data) return null;
@@ -74,18 +81,65 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
 
-  const calculatePrize = () => { /* ... (This is correct) ... */ };
-  const prizeAmount = calculatePrize();
+  const prizeAmount = (() => {
+    if (!game || !user || !game.active_card_numbers) return '0.00';
+    const totalPot = game.amount * game.active_card_numbers.length;
+    const commissionAmount = totalPot * (user.commission_percentage / 100);
+    const prize = totalPot - commissionAmount;
+    return prize.toFixed(2);
+  })();
 
-  useEffect(() => { /* ... (WebSocket and timer logic is correct) ... */ }, [game.id, token, audioLanguage, callSpeed]);
-  useEffect(() => { /* ... (Countdown timer logic is correct) ... */ }, [isPaused, socket]);
-  function speakNumber(number, lang) { /* ... (This is correct) ... */ }
+  useEffect(() => {
+    const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
+    const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
+    const url = `${wsProto}/${apiHost}/ws/game/${game.id}/?token=${token}`;
+    const s = new WebSocket(url);
+    
+    s.onmessage = (ev) => {
+      const data = JSON.parse(ev.data);
+      if (data.action === "call_number") {
+        const newNumber = data.number;
+        setCalledNumbers(prev => new Set(prev).add(newNumber));
+        setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
+        speakNumber(newNumber, audioLanguage);
+        setCountdown(callSpeed);
+      }
+    };
+    setSocket(s);
+    
+    return () => { s.close(); };
+  }, [game.id, token, audioLanguage, callSpeed]);
 
-  // --- THIS IS THE CORRECTED handleCheckCard FUNCTION ---
+  useEffect(() => {
+    if (isPaused || !socket) {
+      return;
+    }
+    
+    const timerId = setInterval(() => {
+      setCountdown(prevCountdown => {
+        if (prevCountdown <= 1) {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ action: 'call_next' }));
+          }
+          return 0;
+        }
+        return prevCountdown - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [isPaused, socket]);
+
+  function speakNumber(number, lang) {
+    if (!('speechSynthesis' in window)) return;
+    const msg = new SpeechSynthesisUtterance(String(number));
+    if (lang === 'Amharic Male' || lang === 'Amharic Female') msg.lang = 'am-ET';
+    window.speechSynthesis.speak(msg);
+  }
+
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
     try {
-      // It now calls the correct win-checker API endpoint with the game ID
       const response = await api.get(`/check_win/${game.id}/${cardNumberToCheck}/`);
       setCheckResult(response.data);
       setIsModalVisible(true);
@@ -96,14 +150,11 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
 
   return (
     <>
-      <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
+      {isModalVisible && <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />}
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
-        
-        {/* --- THE NUMBER GRID IS NOW CORRECTLY RENDERED --- */}
         <div className="flex-grow min-h-0"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
-        
         <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
