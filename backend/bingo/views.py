@@ -1,112 +1,117 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import permissions, status
-from .models import Transaction, GameRound, User, PermanentCard
-from .serializers import TransactionSerializer, GameRoundSerializer, UserSerializer
-from rest_framework.decorators import api_view, permission_classes
-from decimal import Decimal
-from django.shortcuts import get_object_or_404
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+import React, { useEffect, useState } from 'react';
+import Login from './components/Login';
+import CreateGameWizard from './components/CreateGameWizard';
+import GameRunner from './components/GameRunner';
+import Sidebar from './components/Sidebar';
+import TransactionHistory from './components/TransactionHistory';
+import MainLayout from './components/MainLayout';
+import api, { setToken } from './services/api';
 
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token["username"] = user.username
-        token["is_agent"] = user.is_agent
-        return token
+export default function App() {
+  const [authed, setAuthed] = useState(false);
+  const [user, setUser] = useState(null);
+  const [token, setTokenState] = useState(localStorage.getItem('token'));
+  const [view, setView] = useState('create');
+  const [currentGame, setCurrentGame] = useState(null);
+  const [gameSettings, setGameSettings] = useState({ callSpeed: 10, audioLanguage: 'Amharic Male' });
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [gameHistory, setGameHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-class MyTokenObtainPairView(TokenObtainPairView):
-    serializer_class = MyTokenObtainPairSerializer
+  useEffect(() => {
+    const t = localStorage.getItem('token');
+    if (t) {
+      setToken(t);
+      setTokenState(t);
+      api.get('/me/').then(userResponse => {
+        setUser(userResponse.data);
+        setAuthed(true);
+        api.get('/games/history/').then(historyResponse => {
+          setGameHistory(historyResponse.data);
+        });
+      }).catch(() => {
+        localStorage.removeItem('token');
+        setToken(null);
+        setAuthed(false);
+      }).finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
 
-class TransactionListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request):
-        user = request.user
-        if not user.is_agent:
-            return Response({"detail": "Only agents have transaction histories."}, status=status.HTTP_403_FORBIDDEN)
-        qs = Transaction.objects.filter(agent=user).order_by("-timestamp")
-        serializer = TransactionSerializer(qs, many=True)
-        return Response(serializer.data)
+  function handleLogin({ token, user: loggedInUser }) {
+    localStorage.setItem('token', token);
+    setToken(token);
+    setTokenState(token);
+    setUser(loggedInUser);
+    setAuthed(true);
+    // Fetch initial game history after login
+    api.get('/games/history/').then(r => setGameHistory(r.data));
+  }
 
-class CreateGameView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def post(self, request):
-        user = request.user
-        if not user.is_agent:
-            return Response({"detail": "Only agents can create games."}, status=status.HTTP_403_FORBIDDEN)
-        
-        bet_amount_per_card = request.data.get("amount") 
-        active_cards = request.data.get("active_cards", [])
-        
-        # --- NEW VALIDATION RULE ---
-        # Check if the list of active_cards exists and has at least 3 cards.
-        if not active_cards or len(active_cards) < 3:
-            return Response({"detail": "You must select at least 3 cards to start a game."}, status=status.HTTP_400_BAD_REQUEST)
+  // --- THIS IS THE CORRECTED FUNCTION ---
+  function handleGameCreated(game, settings) {
+    // This function now ensures all data is fresh before changing the view.
+    // 1. First, fetch the latest user data (to get the new credit balance)
+    //    and the latest game history (to include the new game).
+    Promise.all([
+      api.get('/me/'),
+      api.get('/games/history/')
+    ]).then(([userResponse, historyResponse]) => {
+      // 2. Update the state with the fresh data.
+      setUser(userResponse.data);
+      setGameHistory(historyResponse.data);
+      
+      // 3. ONLY NOW, set the current game and switch to the runner view.
+      setCurrentGame(game);
+      setGameSettings(settings);
+      setView('runner');
+    }).catch(error => {
+      console.error("Failed to refresh data after game creation:", error);
+      // If something goes wrong, at least go back to the dashboard
+      setView('create');
+    });
+  }
+  
+  const handleNav = (newView) => {
+    setView(newView);
+  };
+  
+  if (isLoading) {
+    return <div className="bg-[#0f172a] min-h-screen flex items-center justify-center text-white">Verifying Session...</div>;
+  }
 
-        try:
-            bet_amount_per_card = Decimal(bet_amount_per_card)
-        except (TypeError, ValueError):
-            return Response({"detail": "Invalid bet amount."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        number_of_cards = len(active_cards)
-        launch_cost = bet_amount_per_card * number_of_cards
+  if (!authed || !user) {
+    return <Login onLogin={handleLogin} />;
+  }
+  
+  if (view === 'runner' && currentGame) {
+    return <GameRunner 
+              game={currentGame} 
+              token={token} 
+              user={user}
+              callSpeed={gameSettings.callSpeed} 
+              audioLanguage={gameSettings.audioLanguage}
+              onNav={handleNav}
+           />;
+  }
 
-        if user.operational_credit < launch_cost:
-            return Response({
-                "detail": f"Insufficient operational credit. Cost: {launch_cost}, Balance: {user.operational_credit}"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        user.operational_credit = user.operational_credit - launch_cost
-        user.save()
-        
-        game_type = request.data.get("game_type", "Regular")
-        Transaction.objects.create(
-            agent=user, type="GAME_LAUNCH", amount=-launch_cost,
-            running_balance=user.operational_credit, note=f"Game launch cost for {game_type} with {number_of_cards} cards"
-        )
-        
-        game = GameRound.objects.create(
-            agent=user, game_type=game_type,
-            winning_pattern=request.data.get("winning_pattern", "Line"),
-            amount=bet_amount_per_card,
-            status="PENDING",
-            active_card_numbers=active_cards
-        )
-        
-        serializer = GameRoundSerializer(game)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+  let mainContent;
+  if (view === 'report') {
+    mainContent = <TransactionHistory />;
+  } else {
+    mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
+  }
 
-class GameDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request, pk):
-        game = get_object_or_404(GameRound, pk=pk)
-        if request.user != game.agent and not request.user.is_staff:
-            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
-        serializer = GameRoundSerializer(game)
-        return Response(serializer.data)
-
-class CurrentUserView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
-
-class PermanentCardDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request, card_number):
-        try:
-            card = PermanentCard.objects.get(card_number=card_number)
-            return Response({'card_number': card.card_number, 'board': card.board})
-        except PermanentCard.DoesNotExist:
-            return Response({"detail": "Card not found."}, status=status.HTTP_404_NOT_FOUND)
-
-class GameHistoryView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request):
-        if not request.user.is_agent:
-            return Response({"detail": "Only agents have a game history."}, status=status.HTTP_403_FORBIDDEN)
-        games = GameRound.objects.filter(agent=request.user).order_by('-created_at')
-        serializer = GameRoundSerializer(games, many=True)
-        return Response(serializer.data)
+  return (
+    <MainLayout
+      user={user}
+      gameHistory={gameHistory}
+      onNav={handleNav}
+      isExpanded={isSidebarExpanded}
+      onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
+    >
+      {mainContent}
+    </MainLayout>
+  );
+}
