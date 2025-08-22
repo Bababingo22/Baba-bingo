@@ -73,16 +73,14 @@ const NumberGrid = ({ calledNumbers }) => {
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [socket, setSocket] = useState(null);
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
-  const [nextNumber, setNextNumber] = useState(null);
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [cardDataForModal, setCardDataForModal] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const intervalRef = useRef(null);
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
   
-  // --- INJECTED: State for the countdown timer ---
+  // --- STATE FOR THE COUNTDOWN TIMER ---
   const [countdown, setCountdown] = useState(callSpeed);
 
   const calculatePrize = () => {
@@ -92,7 +90,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const prize = totalPot - commissionAmount;
     return prize.toFixed(2);
   };
-
   const prizeAmount = calculatePrize();
 
   useEffect(() => {
@@ -100,50 +97,57 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}/${apiHost}/ws/game/${game.id}/?token=${token}`;
     const s = new WebSocket(url);
+    
     s.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
         const newNumber = data.number;
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
-        setNextNumber(data.next_number);
         speakNumber(newNumber, audioLanguage);
+        // When a number is called, reset the countdown for the next number
+        setCountdown(callSpeed);
       }
     };
     setSocket(s);
-    return () => { s.close(); if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [game.id, token, audioLanguage]);
+    
+    return () => { s.close(); };
+  }, [game.id, token, audioLanguage, callSpeed]); // Added callSpeed to dependencies
 
-  // --- INJECTED: New useEffect hook for the countdown timer logic ---
+  // --- THIS IS THE CORRECTED COUNTDOWN LOGIC ---
   useEffect(() => {
-    if (isPaused || !socket) {
+    // Do nothing if the game is paused.
+    if (isPaused) {
       return;
     }
-
-    const timer = setInterval(() => {
+    
+    // Set up an interval that ticks every 1 second.
+    const timerId = setInterval(() => {
       setCountdown(prevCountdown => {
+        // When the countdown reaches 1, call the next number.
         if (prevCountdown <= 1) {
           if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ action: 'call_next' }));
           }
-          return callSpeed; // Reset timer
+          // The countdown will be reset by the onmessage handler when the number arrives.
+          return 0; 
         }
+        // Otherwise, just count down by 1.
         return prevCountdown - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [isPaused, callSpeed, socket]);
+    // Cleanup function to clear the interval.
+    return () => clearInterval(timerId);
+  }, [isPaused, socket]); // This effect only depends on the paused state and the socket connection.
 
-  // The original useEffect for the interval is no longer needed and has been removed.
-
-  function callNext() { if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ action: 'call_next' })); }
   function speakNumber(number, lang) {
     if (!('speechSynthesis' in window)) return;
     const msg = new SpeechSynthesisUtterance(String(number));
     if (lang === 'Amharic Male' || lang === 'Amharic Female') msg.lang = 'am-ET';
     window.speechSynthesis.speak(msg);
   }
+
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
     try {
@@ -166,8 +170,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
-              {/* --- INJECTED: Display the live countdown --- */}
-              <div className="text-8xl font-bold">{countdown}</div>
+              {/* This now displays the live countdown */}
+              <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
             </div>
             <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
             <div className="flex gap-2">
@@ -210,4 +214,4 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       </div>
     </>
   );
-}```
+}
