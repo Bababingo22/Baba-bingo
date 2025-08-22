@@ -3,13 +3,10 @@ import api from '../services/api';
 
 const getBingoLetter = (number) => { /* ... (This is correct) ... */ };
 
-// --- THIS IS THE NEW, FINAL CardCheckModal ---
 const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   if (!checkResult || !checkResult.card_data) return null;
-
   const { is_winner, card_data } = checkResult;
   const { board } = card_data;
-  
   const headers = ['B', 'I', 'N', 'G', 'O'];
   const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-purple-500'];
   const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => board[c][r]));
@@ -44,7 +41,27 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   );
 };
 
-const NumberGrid = ({ calledNumbers }) => { /* ... (This is correct) ... */ };
+const NumberGrid = ({ calledNumbers }) => {
+  const headers = ['B', 'I', 'N', 'G', 'O'];
+  return (
+    <div className="bg-[#1e2b3a] p-4 rounded-lg h-full">
+      <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
+        <tbody>
+          {headers.map((letter, rowIndex) => (
+            <tr key={letter}>
+              <td className="w-12 bg-blue-600 text-yellow-400 font-bold text-2xl text-center rounded-md">{letter}</td>
+              {Array.from({ length: 15 }).map((_, colIndex) => {
+                const num = rowIndex * 15 + colIndex + 1;
+                const isCalled = calledNumbers.has(num);
+                return <td key={num} className={`text-center font-semibold text-lg transition-colors duration-300 ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>{num}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [socket, setSocket] = useState(null);
@@ -55,14 +72,12 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
   const [countdown, setCountdown] = useState(callSpeed);
-  
-  // This state now holds the full result from the backend
   const [checkResult, setCheckResult] = useState(null);
 
   const calculatePrize = () => { /* ... (This is correct) ... */ };
   const prizeAmount = calculatePrize();
 
-  useEffect(() => { /* ... (WebSocket logic is correct) ... */ }, [game.id, token, audioLanguage, callSpeed]);
+  useEffect(() => { /* ... (WebSocket and timer logic is correct) ... */ }, [game.id, token, audioLanguage, callSpeed]);
   useEffect(() => { /* ... (Countdown timer logic is correct) ... */ }, [isPaused, socket]);
   function speakNumber(number, lang) { /* ... (This is correct) ... */ }
 
@@ -70,9 +85,9 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
     try {
-      // It now calls the correct win-checker API endpoint
+      // It now calls the correct win-checker API endpoint with the game ID
       const response = await api.get(`/check_win/${game.id}/${cardNumberToCheck}/`);
-      setCheckResult(response.data); // Store the full result object
+      setCheckResult(response.data);
       setIsModalVisible(true);
     } catch (error) {
       alert(`Error: ${error.response?.data?.detail || 'Card not found.'}`);
@@ -81,17 +96,14 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
 
   return (
     <>
-      <CardCheckModal 
-        checkResult={checkResult} 
-        calledNumbers={calledNumbers} 
-        onClose={() => setIsModalVisible(false)} 
-      />
-      
-      {/* The rest of the JSX is the same */}
+      <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
+        
+        {/* --- THE NUMBER GRID IS NOW CORRECTLY RENDERED --- */}
         <div className="flex-grow min-h-0"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
+        
         <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
