@@ -12,10 +12,8 @@ const getBingoLetter = (number) => {
 
 const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   if (!checkResult || !checkResult.card_data) return null;
-
   const { is_winner, card_data } = checkResult;
   const { card_number, board } = card_data;
-  
   const headers = ['B', 'I', 'N', 'G', 'O'];
   const colors = ['bg-blue-500', 'bg-red-500', 'bg-orange-400', 'bg-green-500', 'bg-purple-500'];
   const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => board[c][r]));
@@ -23,16 +21,13 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-full max-w-lg">
-        
         <div className="text-center mb-4 p-3 rounded-lg bg-red-600">
           <h2 className="text-2xl font-bold text-white">Yaba Bingo</h2>
           <p className="text-white text-lg">Card Number: {card_number}</p>
         </div>
-
         <div className={`text-center mb-4 p-3 rounded-lg ${is_winner ? 'bg-green-500' : 'bg-gray-700'}`}>
           <h2 className="text-4xl font-bold text-white">{is_winner ? 'ዘግቷል' : 'አልዘጋም'}</h2>
         </div>
-        
         <table className="w-full border-separate" style={{ borderSpacing: '6px' }}>
           <thead>
             <tr>{headers.map((h, i) => <th key={h} className={`w-1/5 text-center text-xl font-bold p-2 text-white rounded-md ${colors[i]}`}>{h}</th>)}</tr>
@@ -82,7 +77,10 @@ const NumberGrid = ({ calledNumbers }) => {
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [socket, setSocket] = useState(null);
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
-  const [isPaused, setIsPaused] = useState(true);
+  
+  // --- INJECTED CHANGE: Game starts in a playing state ---
+  const [isPaused, setIsPaused] = useState(false);
+  
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentNumber, setCurrentNumber] = useState(null);
@@ -110,11 +108,14 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         const newNumber = data.number;
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
-        speakNumber(newNumber, audioLanguage);
+        speakText(String(newNumber), audioLanguage);
         setCountdown(callSpeed);
       }
     };
     setSocket(s);
+    
+    // --- INJECTED CHANGE: Announce game start on load ---
+    speakText("ጨዋታው ጀምሯል", audioLanguage);
     
     return () => { s.close(); };
   }, [game.id, token, audioLanguage, callSpeed]);
@@ -137,9 +138,10 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return () => clearInterval(timerId);
   }, [isPaused, socket]);
 
-  function speakNumber(number, lang) {
+  // --- INJECTED CHANGE: A more generic speech function ---
+  function speakText(text, lang) {
     if (!('speechSynthesis' in window)) return;
-    const msg = new SpeechSynthesisUtterance(String(number));
+    const msg = new SpeechSynthesisUtterance(text);
     if (lang === 'Amharic Male' || lang === 'Amharic Female') msg.lang = 'am-ET';
     window.speechSynthesis.speak(msg);
   }
@@ -154,6 +156,14 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       alert(`Error: ${error.response?.data?.detail || 'Card not found.'}`);
     }
   }
+  
+  // --- INJECTED CHANGE: New handler for the End Game button ---
+  const handleEndGame = () => {
+    speakText("ጨዋታው ቋሞል", audioLanguage);
+    setTimeout(() => {
+      onNav('create');
+    }, 1000);
+  };
 
   return (
     <>
@@ -168,18 +178,12 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               <div className="text-gray-400 font-semibold">Next Number</div>
               <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
             </div>
-            <button onClick={() => setIsPaused(!isPaused)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
-            
-            {/* --- INJECTED CHANGE START --- */}
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
-                <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
-              </div>
+            <button onClick={() => setIsPaused(prev => !prev)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
+            <div className="flex gap-2 mb-2">
+              <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
+              <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
             </div>
-            {/* --- INJECTED CHANGE END --- */}
-
-            <button onClick={() => onNav('create')} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
+            <button onClick={handleEndGame} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center mt-auto">
               <div className="text-gray-400 font-semibold">Total Calls</div>
               <div className="text-7xl font-bold">{calledNumbers.size}</div>
