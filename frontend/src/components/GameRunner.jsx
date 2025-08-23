@@ -76,15 +76,13 @@ const NumberGrid = ({ calledNumbers }) => {
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
-  const [isPaused, setIsPaused] = true;
+  const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
-  
-  // Use a ref for the WebSocket to prevent re-renders from affecting it
   const socketRef = useRef(null);
 
   const prizeAmount = (() => {
@@ -95,9 +93,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return prize.toFixed(2);
   })();
 
-  // --- THIS IS THE ROBUST WEBSOCKET AND TIMER LOGIC ---
   useEffect(() => {
-    // Connect to WebSocket
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}://${apiHost}/ws/game/${game.id}/?token=${token}`;
@@ -110,54 +106,40 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
         speakText(String(newNumber), audioLanguage);
-        setCountdown(callSpeed); // Reset countdown on new number
+        setCountdown(callSpeed);
       }
     };
 
-    // When the connection opens, announce the start and unpause the game
     socketRef.current.onopen = () => {
         speakText("ጨዋታው ጀምሯል", audioLanguage);
-        setIsPaused(false); // This will trigger the timer to start
+        setIsPaused(false);
     };
     
-    // Cleanup function to close the connection when the component unmounts
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
+    return () => { if (socketRef.current) socketRef.current.close(); };
   }, [game.id, token, audioLanguage, callSpeed]);
 
-  // A separate effect to handle the countdown timer
   useEffect(() => {
-    // Do nothing if the game is paused.
-    if (isPaused) {
-      return;
-    }
+    if (isPaused) return;
     
     const timerId = setInterval(() => {
       setCountdown(prevCountdown => {
         if (prevCountdown <= 1) {
-          // Check if the socket exists and is ready before sending a message.
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ action: 'call_next' }));
           }
-          return 0; // The countdown will be properly reset by the onmessage handler.
+          return 0;
         }
         return prevCountdown - 1;
       });
     }, 1000);
 
-    // This cleanup function is essential to prevent multiple timers running.
     return () => clearInterval(timerId);
-  }, [isPaused, callSpeed]); // Re-run this effect only when the pause state or speed changes.
+  }, [isPaused, callSpeed]);
 
   function speakText(text, lang) {
     if (!('speechSynthesis' in window)) return;
     const msg = new SpeechSynthesisUtterance(text);
-    if (lang === 'Amharic Male' || lang === 'Amharic Female') {
-      msg.lang = 'am-ET';
-    }
+    if (lang === 'Amharic Male' || lang === 'Amharic Female') msg.lang = 'am-ET';
     window.speechSynthesis.speak(msg);
   }
 
@@ -173,7 +155,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   }
   
   const handleEndGame = () => {
-    setIsPaused(true); // Pause the timer before ending
+    setIsPaused(true);
     speakText("ጨዋታው ቋሞል", audioLanguage);
     setTimeout(() => {
       onNav('create');
@@ -184,10 +166,15 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     <>
       {isModalVisible && <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />}
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
-        <div className="flex-grow min-h-0"> 
+        
+        {/* --- THIS IS THE CORRECTED LAYOUT --- */}
+        {/* Top Section: Takes up 35% of the height */}
+        <div className="h-[35%]"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
-        <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
+        
+        {/* Bottom Section: Takes up 65% of the height */}
+        <div className="h-[65%] grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
