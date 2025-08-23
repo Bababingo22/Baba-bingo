@@ -76,15 +76,13 @@ const NumberGrid = ({ calledNumbers }) => {
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPaused, setIsPaused] = useState(true); // Game starts paused
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
-  
-  // Use a ref for the WebSocket to prevent re-renders from affecting it
   const socketRef = useRef(null);
 
   const prizeAmount = (() => {
@@ -95,9 +93,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return prize.toFixed(2);
   })();
 
-  // --- THIS IS THE ROBUST WEBSOCKET AND TIMER LOGIC ---
+  // This useEffect is ONLY for the WebSocket connection.
   useEffect(() => {
-    // Connect to WebSocket
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}/${apiHost}/ws/game/${game.id}/?token=${token}`;
@@ -110,46 +107,36 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
         speakText(String(newNumber), audioLanguage);
-        setCountdown(callSpeed); // Reset countdown on new number
+        setCountdown(callSpeed);
       }
     };
 
-    // Announce game start when the connection opens
     socketRef.current.onopen = () => {
-        speakText("ጨዋታው ጀምሯል", audioLanguage);
+      speakText("ጨዋታው ጀምሯል", audioLanguage);
+      setIsPaused(false); // Auto-start the game
     };
     
-    // Cleanup function to close the connection when the component unmounts
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
+    return () => { if (socketRef.current) socketRef.current.close(); };
   }, [game.id, token, audioLanguage, callSpeed]);
 
-  // A separate effect to handle the countdown timer
+  // This useEffect is ONLY for the timer.
   useEffect(() => {
-    // Do nothing if the game is paused.
-    if (isPaused) {
-      return;
-    }
+    if (isPaused) return;
     
     const timerId = setInterval(() => {
-      setCountdown(prevCountdown => {
-        if (prevCountdown <= 1) {
-          // Check if the socket exists and is ready before sending a message.
+      setCountdown(prev => {
+        if (prev <= 1) {
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ action: 'call_next' }));
           }
-          return 0; // The countdown will be properly reset by the onmessage handler.
+          return 0;
         }
-        return prevCountdown - 1;
+        return prev - 1;
       });
     }, 1000);
 
-    // This cleanup function is essential to prevent multiple timers running.
     return () => clearInterval(timerId);
-  }, [isPaused, callSpeed]); // Re-run this effect only when the pause state or speed changes.
+  }, [isPaused]); // ONLY depends on isPaused.
 
   function speakText(text, lang) {
     if (!('speechSynthesis' in window)) return;
@@ -172,7 +159,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   }
   
   const handleEndGame = () => {
-    setIsPaused(true); // Pause the timer before ending
+    setIsPaused(true);
     speakText("ጨዋታው ቋሞል", audioLanguage);
     setTimeout(() => {
       onNav('create');
@@ -192,7 +179,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               <div className="text-gray-400 font-semibold">Next Number</div>
               <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
             </div>
-            <button onClick={() => setIsPaused(prev => !prev)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
+            <button onClick={() => setIsPaused(prev => !prev)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-orange-500' : 'bg-blue-600'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
             <div className="flex gap-2 mb-2">
               <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
               <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
