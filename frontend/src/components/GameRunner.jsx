@@ -52,24 +52,31 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   );
 };
 
+// --- THIS IS THE CORRECTED 5x15 NUMBER GRID ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
+  const numbers = Array.from({ length: 75 }, (_, i) => i + 1);
+
   return (
-    <div className="bg-[#1e2b3a] p-4 rounded-lg h-full">
-      <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
-        <tbody>
-          {headers.map((letter, rowIndex) => (
-            <tr key={letter}>
-              <td className="w-12 bg-blue-600 text-yellow-400 font-bold text-2xl text-center rounded-md">{letter}</td>
-              {Array.from({ length: 15 }).map((_, colIndex) => {
-                const num = rowIndex * 15 + colIndex + 1;
-                const isCalled = calledNumbers.has(num);
-                return <td key={num} className={`text-center font-semibold text-lg transition-colors duration-300 ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>{num}</td>;
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
+      <div className="grid grid-cols-16 gap-2 h-full">
+        {/* Headers Column */}
+        <div className="grid grid-rows-5 gap-2">
+          {headers.map(h => <div key={h} className="bg-blue-600 text-yellow-400 font-bold text-xl flex items-center justify-center rounded-md">{h}</div>)}
+        </div>
+        
+        {/* Numbers Grid */}
+        <div className="col-span-15 grid grid-cols-15 grid-rows-5 gap-2">
+          {numbers.map(num => {
+            const isCalled = calledNumbers.has(num);
+            return (
+              <div key={num} className={`text-center font-semibold text-sm flex items-center justify-center rounded-md transition-colors ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>
+                {num}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };
@@ -79,10 +86,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  
-  // --- INJECTED CHANGE: callHistory is now the source of truth for called numbers in order ---
+  const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
-  
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
@@ -100,16 +105,13 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}://${apiHost}/ws/game/${game.id}/?token=${token}`;
     socketRef.current = new WebSocket(url);
-    
-    // --- INJECTED CHANGE: Simplified onmessage handler ---
+
     socketRef.current.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
         const newNumber = data.number;
-        
         setCalledNumbers(prev => new Set(prev).add(newNumber));
-        setCallHistory(prevHistory => [newNumber, ...prevHistory]);
-        
+        setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
         speakText(String(newNumber), audioLanguage);
         setCountdown(callSpeed);
       }
@@ -169,10 +171,10 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     <>
       {isModalVisible && <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />}
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
-        <div className="flex-grow min-h-0"> 
+        <div className="h-[35%]"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
-        <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
+        <div className="h-[65%] grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
@@ -193,21 +195,19 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
             <div className="text-2xl font-bold text-green-400 text-center">
               {prizeAmount} Birr ደራሽ
             </div>
-            {/* --- INJECTED CHANGE START: Full, Scrolling History --- */}
-            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center overflow-x-auto">
-              <div className="flex items-center justify-start gap-3">
+            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
+              <div className="flex items-center justify-center gap-3">
                 {callHistory.length > 0 ? (
                   callHistory.map((num, index) => (
-                    <div key={index} className={`w-24 h-24 rounded-full border-4 flex-shrink-0 flex items-center justify-center ${index === 0 ? 'border-green-400' : 'border-yellow-400'}`}>
+                    <div key={index} className={`w-24 h-24 rounded-full border-4 flex items-center justify-center ${index === 0 ? 'border-green-400' : 'border-yellow-400'}`}>
                       <span className="text-4xl font-bold text-white">{getBingoLetter(num)}{num}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-gray-500 w-full text-center">Previous numbers will appear here</div>
+                  <div className="text-gray-500">Previous numbers will appear here</div>
                 )}
               </div>
             </div>
-            {/* --- INJECTED CHANGE END --- */}
           </div>
         </div>
       </div>
