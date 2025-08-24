@@ -26,31 +26,41 @@ export default function App() {
   const [gameHistory, setGameHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- THIS IS THE ROBUST AUTHENTICATION AND DATA-LOADING LOGIC ---
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
-      api.get('/me/').then(userResponse => {
+      
+      // We will fetch everything at once
+      Promise.all([
+        api.get('/me/'),
+        api.get('/games/history/'),
+        // If a game is in localStorage, re-fetch its latest data
+        gameState.game ? api.get(`/games/${gameState.game.id}/`) : Promise.resolve(null)
+      ]).then(([userResponse, historyResponse, gameResponse]) => {
         setUser(userResponse.data);
-        setAuthed(true);
-        if (gameState.game) {
-          api.get(`/games/${gameState.game.id}/`).then(gameResponse => {
-            setGameState(prevState => ({ ...prevState, game: gameResponse.data }));
-          });
+        setGameHistory(historyResponse.data);
+        if (gameResponse) {
+          // If we got fresh game data, update the game state
+          const updatedGameState = { ...gameState, game: gameResponse.data };
+          setGameState(updatedGameState);
+          localStorage.setItem('yabaBingoGameState', JSON.stringify(updatedGameState));
         }
-        api.get('/games/history/').then(historyResponse => {
-          setGameHistory(historyResponse.data);
-        });
+        setAuthed(true);
       }).catch(() => {
+        // If any API call fails, it's safest to log the user out.
         localStorage.clear();
         setToken(null);
         setAuthed(false);
-      }).finally(() => setIsLoading(false));
+      }).finally(() => {
+        setIsLoading(false);
+      });
     } else {
       setIsLoading(false);
     }
-  }, []);
+  }, []); // The empty array ensures this only runs ONCE on app start
 
   const refreshDashboardData = () => {
     api.get('/me/').then(r => setUser(r.data));
@@ -102,8 +112,6 @@ export default function App() {
            />;
   }
 
-  // --- THIS IS THE CORRECTED LAYOUT ---
-  // The layout is now directly inside App.jsx
   return (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
       <Sidebar 
@@ -112,11 +120,3 @@ export default function App() {
         onNav={handleNav}
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
-      />
-      <main className="flex-1 overflow-y-auto">
-        {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
-        {view === 'report' && <TransactionHistory />}
-      </main>
-    </div>
-  );
-}
