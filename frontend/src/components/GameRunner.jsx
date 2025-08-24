@@ -10,66 +10,60 @@ const getBingoLetter = (number) => {
   return '';
 };
 
-const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
-  if (!checkResult || !checkResult.card_data) return null;
-  const { is_winner, card_data } = checkResult;
-  const { card_number, board } = card_data;
+const CardCheckModal = ({ cardData, calledNumbers, onClose }) => {
+  if (!cardData) return null;
   const headers = ['B', 'I', 'N', 'G', 'O'];
-  const colors = ['bg-blue-500', 'bg-red-500', 'bg-orange-400', 'bg-green-500', 'bg-purple-500'];
-  const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => board[c][r]));
-
+  const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => cardData.board[c][r]));
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-full max-w-lg">
-        <div className="text-center mb-4 p-3 rounded-lg bg-red-600">
-          <h2 className="text-2xl font-bold text-white">Yaba Bingo</h2>
-          <p className="text-white text-lg">Card Number: {card_number}</p>
-        </div>
-        <div className={`text-center mb-4 p-3 rounded-lg ${is_winner ? 'bg-green-500' : 'bg-gray-700'}`}>
-          <h2 className="text-4xl font-bold text-white">{is_winner ? 'ዘግቷል' : 'አልዘጋም'}</h2>
-        </div>
-        <table className="w-full border-separate" style={{ borderSpacing: '6px' }}>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-auto max-w-md">
+        <h2 className="text-3xl font-bold text-center mb-4 text-white">Card #{cardData.card_number}</h2>
+        <table className="w-full border-separate border-spacing-1">
           <thead>
-            <tr>{headers.map((h, i) => <th key={h} className={`w-1/5 text-center text-xl font-bold p-2 text-white rounded-md ${colors[i]}`}>{h}</th>)}</tr>
+            <tr>{headers.map(h => <th key={h} className="w-1/5 text-center text-2xl font-bold p-2 text-white bg-[#1a202c] rounded-md">{h}</th>)}</tr>
           </thead>
           <tbody>
             {rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 {row.map((cellValue, colIndex) => {
                   const isCalled = cellValue !== "FREE" && calledNumbers.has(cellValue);
-                  const isFreeSpace = cellValue === "FREE";
-                  return <td key={`${colIndex}-${rowIndex}`} className={`text-center font-bold text-2xl h-16 rounded-md ${isCalled ? 'bg-yellow-400 text-black' : isFreeSpace ? 'bg-blue-600 text-white' : 'bg-gray-300 text-black'}`}>{isFreeSpace ? '★' : cellValue}</td>;
+                  return <td key={`${colIndex}-${rowIndex}`} className={`text-center font-bold text-3xl h-20 rounded-md transition-colors ${isCalled ? 'bg-green-500 text-white' : 'bg-white text-black'}`}>{cellValue}</td>;
                 })}
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="text-center mt-6">
-          <button onClick={onClose} className="px-10 py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700">Cancel</button>
-        </div>
+        <div className="text-center mt-6"><button onClick={onClose} className="px-8 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Close</button></div>
       </div>
     </div>
   );
 };
 
+// --- THIS IS THE CORRECTED 5x15 NUMBER GRID ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
+  const numbers = Array.from({ length: 75 }, (_, i) => i + 1);
+
   return (
-    <div className="bg-[#1e2b3a] p-4 rounded-lg h-full">
-      <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
-        <tbody>
-          {headers.map((letter, rowIndex) => (
-            <tr key={letter}>
-              <td className="w-12 bg-blue-600 text-yellow-400 font-bold text-2xl text-center rounded-md">{letter}</td>
-              {Array.from({ length: 15 }).map((_, colIndex) => {
-                const num = rowIndex * 15 + colIndex + 1;
-                const isCalled = calledNumbers.has(num);
-                return <td key={num} className={`text-center font-semibold text-lg transition-colors duration-300 ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>{num}</td>;
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
+      <div className="grid grid-cols-16 gap-2 h-full">
+        {/* Headers Column */}
+        <div className="grid grid-rows-5 gap-2">
+          {headers.map(h => <div key={h} className="bg-blue-600 text-yellow-400 font-bold text-xl flex items-center justify-center rounded-md">{h}</div>)}
+        </div>
+        
+        {/* Numbers Grid */}
+        <div className="col-span-15 grid grid-cols-15 grid-rows-5 gap-2">
+          {numbers.map(num => {
+            const isCalled = calledNumbers.has(num);
+            return (
+              <div key={num} className={`text-center font-semibold text-sm flex items-center justify-center rounded-md transition-colors ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>
+                {num}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };
@@ -79,10 +73,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  
-  // --- INJECTED CHANGE: callHistory is now the source of truth for called numbers in order ---
+  const [currentNumber, setCurrentNumber] = useState(null);
   const [callHistory, setCallHistory] = useState([]);
-  
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
@@ -100,16 +92,13 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}://${apiHost}/ws/game/${game.id}/?token=${token}`;
     socketRef.current = new WebSocket(url);
-    
-    // --- INJECTED CHANGE: Simplified onmessage handler ---
+
     socketRef.current.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
         const newNumber = data.number;
-        
         setCalledNumbers(prev => new Set(prev).add(newNumber));
-        setCallHistory(prevHistory => [newNumber, ...prevHistory]);
-        
+        setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h].slice(0, 4)); } return newNumber; });
         speakText(String(newNumber), audioLanguage);
         setCountdown(callSpeed);
       }
@@ -169,10 +158,10 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     <>
       {isModalVisible && <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />}
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
-        <div className="flex-grow min-h-0"> 
+        <div className="h-[35%]"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
-        <div className="flex-grow-[2] min-h-0 grid grid-cols-[300px_1fr] gap-4">
+        <div className="h-[65%] grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
@@ -193,21 +182,19 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
             <div className="text-2xl font-bold text-green-400 text-center">
               {prizeAmount} Birr ደራሽ
             </div>
-            {/* --- INJECTED CHANGE START: Full, Scrolling History --- */}
-            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center overflow-x-auto">
-              <div className="flex items-center justify-start gap-3">
+            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
+              <div className="flex items-center justify-center gap-3">
                 {callHistory.length > 0 ? (
                   callHistory.map((num, index) => (
-                    <div key={index} className={`w-24 h-24 rounded-full border-4 flex-shrink-0 flex items-center justify-center ${index === 0 ? 'border-green-400' : 'border-yellow-400'}`}>
+                    <div key={index} className={`w-24 h-24 rounded-full border-4 flex items-center justify-center ${index === 0 ? 'border-green-400' : 'border-yellow-400'}`}>
                       <span className="text-4xl font-bold text-white">{getBingoLetter(num)}{num}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-gray-500 w-full text-center">Previous numbers will appear here</div>
+                  <div className="text-gray-500">Previous numbers will appear here</div>
                 )}
               </div>
             </div>
-            {/* --- INJECTED CHANGE END --- */}
           </div>
         </div>
       </div>
