@@ -112,7 +112,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
-  const [voices, setVoices] = useState([]);
 
   const prizeAmount = (() => {
     if (!game || !user || !game.active_card_numbers) return '0.00';
@@ -121,13 +120,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const prize = totalPot - commissionAmount;
     return prize.toFixed(2);
   })();
-
-  useEffect(() => {
-    const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
-    return () => { window.speechSynthesis.onvoiceschanged = null; };
-  }, []);
 
   useEffect(() => {
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -175,14 +167,11 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     window.speechSynthesis.cancel();
     const textToSpeak = isAnnouncement ? textOrNumber : `${getBingoLetter(textOrNumber)} ${textOrNumber}`;
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
-
+    const voices = window.speechSynthesis.getVoices();
     if (lang === 'Amharic Male' || lang === 'Amharic Female') {
       const amharicVoice = voices.find(voice => voice.lang === 'am-ET');
-      if (amharicVoice) {
-        utterance.voice = amharicVoice;
-      } else {
-        utterance.lang = 'am-ET';
-      }
+      if (amharicVoice) utterance.voice = amharicVoice;
+      else utterance.lang = 'am-ET';
     } else {
       utterance.lang = 'en-US';
     }
@@ -209,33 +198,43 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   return (
     <>
       {isModalVisible && <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />}
-      <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
-        <div className="h-[35%]"> 
-          <NumberGrid calledNumbers={calledNumbers} />
-        </div>
-        <div className="h-[65%] grid grid-cols-[300px_1fr] gap-4">
-          <div className="flex flex-col gap-4">
-            <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
-              <div className="text-gray-400 font-semibold">Next Number</div>
-              <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
+      <div className="bg-[#0f172a] text-white h-screen p-4 flex gap-4">
+        
+        {/* Left Column: Controls */}
+        <div className="w-64 flex flex-col gap-4">
+          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
+            <div className="text-gray-400 font-semibold">Total Calls</div>
+            <div className="text-7xl font-bold">{calledNumbers.size}</div>
+          </div>
+          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
+            <div className="text-gray-400 font-semibold mb-2">Winning Pattern</div>
+            <div className="grid grid-cols-5 gap-1 mx-auto w-40 h-40">
+              {Array.from({length: 25}).map((_, i) => <div key={i} className={`rounded-full ${[0,4,6,8,12,16,18,20,24].includes(i) ? 'bg-yellow-400' : 'bg-blue-800'}`}></div>)}
             </div>
+          </div>
+          <div className="bg-[#1e2b3a] p-4 rounded-lg text-center flex-1 flex flex-col justify-center">
+            <div className="text-gray-400 font-semibold">Next Number</div>
+            <div className="text-8xl font-bold mt-4">{isPaused ? '-' : countdown}</div>
+          </div>
+          <div className="space-y-2">
             <button onClick={() => setIsPaused(prev => !prev)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
             <div className="flex gap-2 mb-2">
               <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
               <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
             </div>
             <button onClick={handleEndGame} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
-            <div className="bg-[#1e2b3a] p-4 rounded-lg text-center mt-auto">
-              <div className="text-gray-400 font-semibold">Total Calls</div>
-              <div className="text-7xl font-bold">{calledNumbers.size}</div>
-            </div>
           </div>
-          <div className="flex flex-col gap-4">
-            <div className="text-2xl font-bold text-green-400 text-center">
-              {prizeAmount} Birr ደራሽ
-            </div>
-            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
-              <div className="flex flex-wrap gap-3 justify-center items-center h-full">
+        </div>
+        
+        {/* Right Column: Main Display */}
+        <div className="flex-1 flex flex-col gap-4">
+          <div className="flex-[2] min-h-0">
+            <NumberGrid calledNumbers={calledNumbers} />
+          </div>
+          <div className="flex-1 bg-[#1e2b3a] p-4 rounded-lg">
+            <div className="flex justify-between items-center h-full">
+              <div className="text-2xl font-bold text-green-400">{prizeAmount} Birr ደራሽ</div>
+              <div className="flex flex-wrap gap-3 justify-center items-center">
                 {currentNumber && (
                   <div className={`w-24 h-24 rounded-full border-4 flex-shrink-0 flex items-center justify-center ${getLetterColorClass(getBingoLetter(currentNumber))}`}>
                     <span className="text-4xl font-bold text-white">{getBingoLetter(currentNumber)}{currentNumber}</span>
@@ -253,6 +252,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
             </div>
           </div>
         </div>
+
       </div>
     </>
   );
