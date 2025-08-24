@@ -4,7 +4,6 @@ import CreateGameWizard from './components/CreateGameWizard';
 import GameRunner from './components/GameRunner';
 import Sidebar from './components/Sidebar';
 import TransactionHistory from './components/TransactionHistory';
-import MainLayout from './components/MainLayout';
 import api, { setToken } from './services/api';
 
 // Helper function to safely get data from localStorage
@@ -21,12 +20,8 @@ export default function App() {
   const [authed, setAuthed] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setTokenState] = useState(localStorage.getItem('token'));
-  
-  // --- THIS IS THE FIX ---
-  // Initialize state from localStorage
   const [gameState, setGameState] = useState(getInitialGameState());
   const [view, setView] = useState(gameState.game ? 'runner' : 'create');
-
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [gameHistory, setGameHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +34,6 @@ export default function App() {
       api.get('/me/').then(userResponse => {
         setUser(userResponse.data);
         setAuthed(true);
-        // If a game was loaded from localStorage, re-fetch its latest state
         if (gameState.game) {
           api.get(`/games/${gameState.game.id}/`).then(gameResponse => {
             setGameState(prevState => ({ ...prevState, game: gameResponse.data }));
@@ -49,7 +43,7 @@ export default function App() {
           setGameHistory(historyResponse.data);
         });
       }).catch(() => {
-        localStorage.clear(); // Clear all game data on auth failure
+        localStorage.clear();
         setToken(null);
         setAuthed(false);
       }).finally(() => setIsLoading(false));
@@ -72,7 +66,6 @@ export default function App() {
     refreshDashboardData();
   }
 
-  // --- THIS IS THE CORRECTED FUNCTION ---
   function handleGameCreated(game, settings) {
     const newGameState = { game, settings };
     localStorage.setItem('yabaBingoGameState', JSON.stringify(newGameState));
@@ -82,7 +75,6 @@ export default function App() {
   }
   
   const handleNav = (newView) => {
-    // When navigating away, clear the saved game from memory
     if (newView !== 'runner') {
       localStorage.removeItem('yabaBingoGameState');
       setGameState({ game: null, settings: { callSpeed: 10, audioLanguage: 'Amharic Male' } });
@@ -100,7 +92,7 @@ export default function App() {
   
   if (view === 'runner' && gameState.game) {
     return <GameRunner 
-              key={gameState.game.id} // Add key to force re-mount on new game
+              key={gameState.game.id}
               game={gameState.game} 
               token={token} 
               user={user}
@@ -110,22 +102,21 @@ export default function App() {
            />;
   }
 
-  let mainContent;
-  if (view === 'report') {
-    mainContent = <TransactionHistory />;
-  } else {
-    mainContent = <CreateGameWizard onCreated={handleGameCreated} />;
-  }
-
+  // --- THIS IS THE CORRECTED LAYOUT ---
+  // The layout is now directly inside App.jsx
   return (
-    <MainLayout
-      user={user}
-      gameHistory={gameHistory}
-      onNav={handleNav}
-      isExpanded={isSidebarExpanded}
-      onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
-    >
-      {mainContent}
-    </MainLayout>
+    <div className="flex bg-[#0f172a] text-white min-h-screen">
+      <Sidebar 
+        user={user} 
+        gameHistory={gameHistory}
+        onNav={handleNav}
+        isExpanded={isSidebarExpanded}
+        onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
+      />
+      <main className="flex-1 overflow-y-auto">
+        {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
+        {view === 'report' && <TransactionHistory />}
+      </main>
+    </div>
   );
 }
