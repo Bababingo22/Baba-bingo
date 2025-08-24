@@ -16,8 +16,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
-
-  // --- THIS IS THE FIX: State to hold the browser's available voices ---
   const [voices, setVoices] = useState([]);
 
   const prizeAmount = (() => {
@@ -28,19 +26,11 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return prize.toFixed(2);
   })();
 
-  // --- THIS IS THE FIX: Load voices when the component mounts ---
   useEffect(() => {
-    const loadVoices = () => {
-      setVoices(window.speechSynthesis.getVoices());
-    };
-    // The 'voiceschanged' event fires when the list of voices is ready.
+    const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
     window.speechSynthesis.onvoiceschanged = loadVoices;
-    // Call it once manually in case the event has already fired.
     loadVoices();
-    
-    return () => {
-      window.speechSynthesis.onvoiceschanged = null;
-    };
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
   }, []);
 
   useEffect(() => {
@@ -88,26 +78,41 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   function speakText(textOrNumber, lang, isAnnouncement = false) {
     if (!('speechSynthesis' in window)) return;
     
-    window.speechSynthesis.cancel(); // Clear any previous speech
+    window.speechSynthesis.cancel();
 
-    const textToSpeak = isAnnouncement ? textOrNumber : `${getBingoLetter(textOrNumber)} ${textOrNumber}`;
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-
-    if (lang === 'Amharic Male' || lang === 'Amharic Female') {
-      // Find the Amharic voice from the loaded list
-      const amharicVoice = voices.find(voice => voice.lang === 'am-ET');
-      if (amharicVoice) {
-        utterance.voice = amharicVoice;
-      } else {
-        // Fallback if no specific Amharic voice is found
-        utterance.lang = 'am-ET';
-        console.warn("Amharic voice not found, using language fallback.");
+    if (isAnnouncement) {
+      // For announcements, speak the whole phrase in one go
+      const utterance = new SpeechSynthesisUtterance(textOrNumber);
+      if (lang === 'Amharic Male' || lang === 'Amharic Female') {
+        const amharicVoice = voices.find(voice => voice.lang === 'am-ET');
+        if (amharicVoice) utterance.voice = amharicVoice;
+        else utterance.lang = 'am-ET';
       }
+      window.speechSynthesis.speak(utterance);
     } else {
-      utterance.lang = 'en-US';
+      // For called numbers, speak in two parts
+      const letter = getBingoLetter(textOrNumber);
+      const number = String(textOrNumber);
+
+      // Part 1: Speak the letter in English
+      const letterUtterance = new SpeechSynthesisUtterance(letter);
+      letterUtterance.lang = 'en-US';
+      
+      // Part 2: Speak the number in Amharic
+      const numberUtterance = new SpeechSynthesisUtterance(number);
+      if (lang === 'Amharic Male' || lang === 'Amharic Female') {
+        const amharicVoice = voices.find(voice => voice.lang === 'am-ET');
+        if (amharicVoice) numberUtterance.voice = amharicVoice;
+        else numberUtterance.lang = 'am-ET';
+      }
+      
+      // Chain the speech: when the letter finishes, the number starts
+      letterUtterance.onend = () => {
+        window.speechSynthesis.speak(numberUtterance);
+      };
+      
+      window.speechSynthesis.speak(letterUtterance);
     }
-    
-    window.speechSynthesis.speak(utterance);
   }
 
   async function handleCheckCard() {
