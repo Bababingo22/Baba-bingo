@@ -73,18 +73,17 @@ const NumberGrid = ({ calledNumbers }) => {
       <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
         <thead>
           <tr>
-            <th className="w-12"></th> {/* Empty corner */}
-            {Array.from({ length: 15 }, (_, i) => (
-              <th key={`header-${i + 1}`} className="font-bold text-gray-400 text-sm">{i + 1}</th>
+            {/* The number headers are removed from here */}
+            {headers.map((letter, index) => (
+              <th key={letter} className={`text-white font-bold text-2xl text-center rounded-md ${headerColors[index]}`}>{letter}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {headers.map((letter, rowIndex) => (
-            <tr key={letter}>
-              <td className={`font-bold text-2xl text-center rounded-md text-white ${headerColors[rowIndex]}`}>{letter}</td>
-              {Array.from({ length: 15 }, (_, colIndex) => {
-                const num = rowIndex * 15 + colIndex + 1;
+          {Array.from({ length: 15 }).map((_, rowIndex) => (
+            <tr key={rowIndex}>
+              {Array.from({ length: 5 }).map((_, colIndex) => {
+                const num = colIndex * 15 + rowIndex + 1;
                 const isCalled = calledNumbers.has(num);
                 return (
                   <td
@@ -136,13 +135,13 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         const newNumber = data.number;
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
-        speakText(String(newNumber), audioLanguage);
+        speakText(newNumber, audioLanguage); // Use the new speakText function
         setCountdown(callSpeed);
       }
     };
 
     socketRef.current.onopen = () => {
-        speakText("ጨዋታው ጀምሯል", audioLanguage);
+        speakText("ጨዋታው ጀምሯል", audioLanguage, true); // Announce game start
         setIsPaused(false);
     };
     
@@ -167,10 +166,20 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return () => clearInterval(timerId);
   }, [isPaused, callSpeed]);
 
-  function speakText(text, lang) {
+  // --- THIS IS THE CORRECTED SPEECH FUNCTION ---
+  function speakText(textOrNumber, lang, isAnnouncement = false) {
     if (!('speechSynthesis' in window)) return;
-    const msg = new SpeechSynthesisUtterance(text);
-    if (lang === 'Amharic Male' || lang === 'Amharic Female') msg.lang = 'am-ET';
+
+    let textToSpeak = textOrNumber;
+    if (!isAnnouncement) {
+      // It's a number, so format it with the letter
+      textToSpeak = `${getBingoLetter(textOrNumber)} ${textOrNumber}`;
+    }
+
+    const msg = new SpeechSynthesisUtterance(textToSpeak);
+    if (lang === 'Amharic Male' || lang === 'Amharic Female') {
+      msg.lang = 'am-ET';
+    }
     window.speechSynthesis.speak(msg);
   }
 
@@ -187,7 +196,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   
   const handleEndGame = () => {
     setIsPaused(true);
-    speakText("ጨዋታው ቋሞል", audioLanguage);
+    speakText("ጨዋታው ቋሞል", audioLanguage, true); // This is an announcement
     setTimeout(() => { onNav('create'); }, 1000);
   };
 
