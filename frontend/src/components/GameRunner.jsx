@@ -67,17 +67,34 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
 // --- INJECTED CHANGE: This is the new, final NumberGrid ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
+  const headerColors = ['bg-blue-600', 'bg-green-600', 'bg-yellow-500', 'bg-red-600', 'bg-purple-600'];
+
   return (
     <div className="bg-[#1e2b3a] p-4 rounded-lg h-full">
       <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
+        <thead>
+          <tr>
+            {headers.map((letter, index) => (
+              <th key={letter} className={`text-white font-bold text-2xl text-center rounded-md ${headerColors[index]}`}>{letter}</th>
+            ))}
+          </tr>
+        </thead>
         <tbody>
-          {headers.map((letter, rowIndex) => (
-            <tr key={letter}>
-              <td className="w-12 bg-blue-600 text-yellow-400 font-bold text-2xl text-center rounded-md">{letter}</td>
-              {Array.from({ length: 15 }).map((_, colIndex) => {
-                const num = rowIndex * 15 + colIndex + 1;
+          {Array.from({ length: 15 }).map((_, rowIndex) => (
+            <tr key={rowIndex}>
+              {Array.from({ length: 5 }).map((_, colIndex) => {
+                const num = colIndex * 15 + rowIndex + 1;
                 const isCalled = calledNumbers.has(num);
-                return <td key={num} className={`text-center font-semibold text-lg transition-colors duration-300 ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>{num}</td>;
+                return (
+                  <td 
+                    key={num} 
+                    className={`text-center font-semibold text-lg transition-colors duration-300 ${
+                      isCalled ? 'text-yellow-400 font-bold' : 'text-gray-600'
+                    }`}
+                  >
+                    {num}
+                  </td>
+                );
               })}
             </tr>
           ))}
@@ -202,7 +219,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               {prizeAmount} Birr ደራሽ
             </div>
             <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
-              {/* --- INJECTED CHANGE: Call history with color coding --- */}
               <div className="flex flex-wrap gap-3 justify-center items-center h-full">
                 {currentNumber && (
                   <div className={`w-24 h-24 rounded-full border-4 flex-shrink-0 flex items-center justify-center ${getLetterColorClass(getBingoLetter(currentNumber))}`}>
