@@ -26,31 +26,26 @@ export default function App() {
   const [gameHistory, setGameHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- THIS IS THE ROBUST AUTHENTICATION AND DATA-LOADING LOGIC ---
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (t) {
       setToken(t);
       setTokenState(t);
       
-      // We will fetch everything at once
       Promise.all([
         api.get('/me/'),
         api.get('/games/history/'),
-        // If a game is in localStorage, re-fetch its latest data
         gameState.game ? api.get(`/games/${gameState.game.id}/`) : Promise.resolve(null)
       ]).then(([userResponse, historyResponse, gameResponse]) => {
         setUser(userResponse.data);
         setGameHistory(historyResponse.data);
         if (gameResponse) {
-          // If we got fresh game data, update the game state
           const updatedGameState = { ...gameState, game: gameResponse.data };
           setGameState(updatedGameState);
           localStorage.setItem('yabaBingoGameState', JSON.stringify(updatedGameState));
         }
         setAuthed(true);
       }).catch(() => {
-        // If any API call fails, it's safest to log the user out.
         localStorage.clear();
         setToken(null);
         setAuthed(false);
@@ -60,7 +55,7 @@ export default function App() {
     } else {
       setIsLoading(false);
     }
-  }, []); // The empty array ensures this only runs ONCE on app start
+  }, []);
 
   const refreshDashboardData = () => {
     api.get('/me/').then(r => setUser(r.data));
@@ -120,3 +115,11 @@ export default function App() {
         onNav={handleNav}
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
+      />
+      <main className="flex-1 overflow-y-auto">
+        {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
+        {view === 'report' && <TransactionHistory />}
+      </main>
+    </div>
+  );
+}
