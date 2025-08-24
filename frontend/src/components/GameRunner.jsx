@@ -10,7 +10,6 @@ const getBingoLetter = (number) => {
   return '';
 };
 
-// --- THIS IS THE CORRECTED HISTORY CIRCLE COLOR LOGIC ---
 const getLetterColorClass = (letter) => {
   switch (letter) {
     case 'B': return 'border-blue-500';
@@ -64,20 +63,39 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   );
 };
 
-// --- THIS IS THE NEW, FINAL NumberGrid ---
+// --- THIS IS THE FINAL, CORRECTLY STYLED NUMBER GRID ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
+  const headerColors = ['bg-blue-600', 'bg-green-600', 'bg-yellow-500', 'bg-red-600', 'bg-purple-600'];
+
   return (
     <div className="bg-[#1e2b3a] p-4 rounded-lg h-full">
       <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
+        <thead>
+          <tr>
+            <th className="w-12"></th> {/* Empty corner */}
+            {Array.from({ length: 15 }, (_, i) => (
+              <th key={`header-${i + 1}`} className="font-bold text-gray-400 text-sm">{i + 1}</th>
+            ))}
+          </tr>
+        </thead>
         <tbody>
           {headers.map((letter, rowIndex) => (
             <tr key={letter}>
-              <td className="w-12 bg-blue-600 text-yellow-400 font-bold text-2xl text-center rounded-md">{letter}</td>
-              {Array.from({ length: 15 }).map((_, colIndex) => {
+              <td className={`font-bold text-2xl text-center rounded-md text-white ${headerColors[rowIndex]}`}>{letter}</td>
+              {Array.from({ length: 15 }, (_, colIndex) => {
                 const num = rowIndex * 15 + colIndex + 1;
                 const isCalled = calledNumbers.has(num);
-                return <td key={num} className={`text-center font-semibold text-lg transition-colors duration-300 ${isCalled ? 'text-white font-bold' : 'text-gray-600'}`}>{num}</td>;
+                return (
+                  <td
+                    key={num}
+                    className={`text-center font-semibold text-lg transition-colors duration-300 ${
+                      isCalled ? 'text-yellow-400 font-bold' : 'text-gray-600'
+                    }`}
+                  >
+                    {num}
+                  </td>
+                );
               })}
             </tr>
           ))}
