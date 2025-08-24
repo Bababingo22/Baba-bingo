@@ -1,10 +1,106 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 
-const getBingoLetter = (number) => { /* ... (This is correct) ... */ };
-const getLetterColorClass = (letter) => { /* ... (This is correct) ... */ };
-const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => { /* ... (This is correct) ... */ };
-const NumberGrid = ({ calledNumbers }) => { /* ... (This is correct) ... */ };
+const getBingoLetter = (number) => {
+  if (number >= 1 && number <= 15) return 'B';
+  if (number >= 16 && number <= 30) return 'I';
+  if (number >= 31 && number <= 45) return 'N';
+  if (number >= 46 && number <= 60) return 'G';
+  if (number >= 61 && number <= 75) return 'O';
+  return '';
+};
+
+const getLetterColorClass = (letter) => {
+  switch (letter) {
+    case 'B': return 'border-blue-500';
+    case 'I': return 'border-green-500';
+    case 'N': return 'border-yellow-500';
+    case 'G': return 'border-red-500';
+    case 'O': return 'border-purple-500';
+    default: return 'border-gray-500';
+  }
+};
+
+const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
+  if (!checkResult || !checkResult.card_data) return null;
+  const { is_winner, card_data } = checkResult;
+  const { card_number, board } = card_data;
+  const headers = ['B', 'I', 'N', 'G', 'O'];
+  const colors = ['bg-blue-500', 'bg-red-500', 'bg-orange-400', 'bg-green-500', 'bg-purple-500'];
+  const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => board[c][r]));
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#2d3748] p-6 rounded-lg shadow-xl relative w-full max-w-lg">
+        <div className="text-center mb-4 p-3 rounded-lg bg-red-600">
+          <h2 className="text-2xl font-bold text-white">Yaba Bingo</h2>
+          <p className="text-white text-lg">Card Number: {card_number}</p>
+        </div>
+        <div className={`text-center mb-4 p-3 rounded-lg ${is_winner ? 'bg-green-500' : 'bg-gray-700'}`}>
+          <h2 className="text-4xl font-bold text-white">{is_winner ? 'ዘግቷል' : 'አልዘጋም'}</h2>
+        </div>
+        <table className="w-full border-separate" style={{ borderSpacing: '6px' }}>
+          <thead>
+            <tr>{headers.map((h, i) => <th key={h} className={`w-1/5 text-center text-xl font-bold p-2 text-white rounded-md ${colors[i]}`}>{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cellValue, colIndex) => {
+                  const isCalled = cellValue !== "FREE" && calledNumbers.has(cellValue);
+                  const isFreeSpace = cellValue === "FREE";
+                  return <td key={`${colIndex}-${rowIndex}`} className={`text-center font-bold text-2xl h-16 rounded-md ${isCalled ? 'bg-yellow-400 text-black' : isFreeSpace ? 'bg-blue-600 text-white' : 'bg-gray-300 text-black'}`}>{isFreeSpace ? '★' : cellValue}</td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="text-center mt-6">
+          <button onClick={onClose} className="px-10 py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NumberGrid = ({ calledNumbers }) => {
+  const headers = ['B', 'I', 'N', 'G', 'O'];
+  const headerColors = ['bg-blue-600', 'bg-green-600', 'bg-yellow-500', 'bg-red-600', 'bg-purple-600'];
+
+  return (
+    <div className="bg-[#1e2b3a] p-4 rounded-lg h-full">
+      <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
+        <thead>
+          <tr>
+            {headers.map((letter, index) => (
+              <th key={letter} className={`text-white font-bold text-2xl text-center rounded-md ${headerColors[index]}`}>{letter}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 15 }).map((_, rowIndex) => (
+            <tr key={rowIndex}>
+              {Array.from({ length: 5 }).map((_, colIndex) => {
+                const num = colIndex * 15 + rowIndex + 1;
+                const isCalled = calledNumbers.has(num);
+                return (
+                  <td
+                    key={num}
+                    className={`text-center font-semibold text-lg transition-colors duration-300 ${
+                      isCalled ? 'text-yellow-400 font-bold' : 'text-gray-600'
+                    }`}
+                  >
+                    {num}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
@@ -16,8 +112,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
-
-  // --- THIS IS THE FIX: State to hold the browser's available voices ---
   const [voices, setVoices] = useState([]);
 
   const prizeAmount = (() => {
@@ -28,19 +122,11 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return prize.toFixed(2);
   })();
 
-  // --- THIS IS THE FIX: Load voices when the component mounts ---
   useEffect(() => {
-    const loadVoices = () => {
-      setVoices(window.speechSynthesis.getVoices());
-    };
-    // The 'voiceschanged' event fires when the list of voices is ready.
+    const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
     window.speechSynthesis.onvoiceschanged = loadVoices;
-    // Call it once manually in case the event has already fired.
     loadVoices();
-    
-    return () => {
-      window.speechSynthesis.onvoiceschanged = null;
-    };
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
   }, []);
 
   useEffect(() => {
@@ -61,8 +147,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     };
 
     socketRef.current.onopen = () => {
-      speakText("ጨዋታው ጀምሯል", audioLanguage, true);
-      setIsPaused(false);
+        speakText("ጨዋታው ጀምሯል", audioLanguage, true);
+        setIsPaused(false);
     };
     
     return () => { if (socketRef.current) socketRef.current.close(); };
@@ -84,29 +170,22 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return () => clearInterval(timerId);
   }, [isPaused, callSpeed]);
 
-  // --- THIS IS THE FINAL, ROBUST SPEECH FUNCTION ---
   function speakText(textOrNumber, lang, isAnnouncement = false) {
     if (!('speechSynthesis' in window)) return;
-    
-    window.speechSynthesis.cancel(); // Clear any previous speech
-
+    window.speechSynthesis.cancel();
     const textToSpeak = isAnnouncement ? textOrNumber : `${getBingoLetter(textOrNumber)} ${textOrNumber}`;
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
 
     if (lang === 'Amharic Male' || lang === 'Amharic Female') {
-      // Find the Amharic voice from the loaded list
       const amharicVoice = voices.find(voice => voice.lang === 'am-ET');
       if (amharicVoice) {
         utterance.voice = amharicVoice;
       } else {
-        // Fallback if no specific Amharic voice is found
         utterance.lang = 'am-ET';
-        console.warn("Amharic voice not found, using language fallback.");
       }
     } else {
       utterance.lang = 'en-US';
     }
-    
     window.speechSynthesis.speak(utterance);
   }
 
