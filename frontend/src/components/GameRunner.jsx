@@ -72,18 +72,16 @@ const NumberGrid = ({ calledNumbers }) => {
       <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
         <thead>
           <tr>
-            <th className="w-12"></th> {/* Empty corner */}
-            {Array.from({ length: 15 }, (_, i) => (
-              <th key={`header-${i + 1}`} className="font-bold text-gray-400 text-sm">{i + 1}</th>
+            {headers.map((letter, index) => (
+              <th key={letter} className={`text-white font-bold text-2xl text-center rounded-md ${headerColors[index]}`}>{letter}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {headers.map((letter, rowIndex) => (
-            <tr key={letter}>
-              <td className={`font-bold text-2xl text-center rounded-md text-white ${headerColors[rowIndex]}`}>{letter}</td>
-              {Array.from({ length: 15 }, (_, colIndex) => {
-                const num = rowIndex * 15 + colIndex + 1;
+          {Array.from({ length: 15 }).map((_, rowIndex) => (
+            <tr key={rowIndex}>
+              {Array.from({ length: 5 }).map((_, colIndex) => {
+                const num = colIndex * 15 + rowIndex + 1;
                 const isCalled = calledNumbers.has(num);
                 return (
                   <td
@@ -105,7 +103,7 @@ const NumberGrid = ({ calledNumbers }) => {
 };
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
-  const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
+  const [calledNumbers, setCalledNumbers] useState(new Set(game.called_numbers || []));
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -224,4 +222,49 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       {isModalVisible && <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />}
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
         <div className="h-[35%]"> 
-          <NumberGrid calledNumbers={call
+          <NumberGrid calledNumbers={calledNumbers} />
+        </div>
+        <div className="h-[65%] grid grid-cols-[300px_1fr] gap-4">
+          <div className="flex flex-col gap-4">
+            <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
+              <div className="text-gray-400 font-semibold">Next Number</div>
+              <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
+            </div>
+            <button onClick={() => setIsPaused(prev => !prev)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
+            <div className="flex gap-2 mb-2">
+              <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
+              <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
+            </div>
+            <button onClick={handleEndGame} className="w-full py-3 rounded-lg font-bold bg-red-600">End game</button>
+            <div className="bg-[#1e2b3a] p-4 rounded-lg text-center mt-auto">
+              <div className="text-gray-400 font-semibold">Total Calls</div>
+              <div className="text-7xl font-bold">{calledNumbers.size}</div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="text-2xl font-bold text-green-400 text-center">
+              {prizeAmount} Birr ደራሽ
+            </div>
+            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1">
+              <div className="flex flex-wrap gap-3 justify-center items-center h-full">
+                {currentNumber && (
+                  <div className={`w-24 h-24 rounded-full border-4 flex-shrink-0 flex items-center justify-center ${getLetterColorClass(getBingoLetter(currentNumber))}`}>
+                    <span className="text-4xl font-bold text-white">{getBingoLetter(currentNumber)}{currentNumber}</span>
+                  </div>
+                )}
+                {callHistory.map((num, index) => (
+                  <div key={index} className={`w-24 h-24 rounded-full border-4 flex-shrink-0 flex items-center justify-center ${getLetterColorClass(getBingoLetter(num))}`}>
+                    <span className="text-4xl font-bold text-white">{getBingoLetter(num)}{num}</span>
+                  </div>
+                ))}
+                {!currentNumber && callHistory.length === 0 && (
+                  <div className="text-gray-500">Previous numbers will appear here</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
