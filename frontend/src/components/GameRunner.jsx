@@ -103,7 +103,7 @@ const NumberGrid = ({ calledNumbers }) => {
 };
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
-  const [calledNumbers, setCalledNumbers] useState(new Set(game.called_numbers || []));
+  const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
