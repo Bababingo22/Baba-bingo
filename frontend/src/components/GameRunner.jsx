@@ -63,7 +63,6 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   );
 };
 
-// --- THIS IS THE FINAL, CORRECTLY STYLED NUMBER GRID ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
   const headerColors = ['bg-blue-600', 'bg-green-600', 'bg-yellow-500', 'bg-red-600', 'bg-purple-600'];
@@ -73,7 +72,6 @@ const NumberGrid = ({ calledNumbers }) => {
       <table className="w-full h-full border-separate" style={{ borderSpacing: '4px' }}>
         <thead>
           <tr>
-            {/* The number headers are removed from here */}
             {headers.map((letter, index) => (
               <th key={letter} className={`text-white font-bold text-2xl text-center rounded-md ${headerColors[index]}`}>{letter}</th>
             ))}
@@ -133,15 +131,22 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
         const newNumber = data.number;
+        
         setCalledNumbers(prev => new Set(prev).add(newNumber));
-        setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
-        speakText(newNumber, audioLanguage); // Use the new speakText function
+        setCurrentNumber(prevCurrent => {
+          if (prevCurrent !== null) {
+            setCallHistory(prevHistory => [prevCurrent, ...prevHistory]);
+          }
+          return newNumber;
+        });
+        
+        speakText(newNumber, audioLanguage, false); // It's a number, not an announcement
         setCountdown(callSpeed);
       }
     };
 
     socketRef.current.onopen = () => {
-        speakText("ጨዋታው ጀምሯል", audioLanguage, true); // Announce game start
+        speakText("ጨዋታው ጀምሯል", audioLanguage, true); // This is an announcement
         setIsPaused(false);
     };
     
@@ -166,13 +171,11 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return () => clearInterval(timerId);
   }, [isPaused, callSpeed]);
 
-  // --- THIS IS THE CORRECTED SPEECH FUNCTION ---
   function speakText(textOrNumber, lang, isAnnouncement = false) {
     if (!('speechSynthesis' in window)) return;
 
     let textToSpeak = textOrNumber;
     if (!isAnnouncement) {
-      // It's a number, so format it with the letter
       textToSpeak = `${getBingoLetter(textOrNumber)} ${textOrNumber}`;
     }
 
@@ -196,7 +199,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   
   const handleEndGame = () => {
     setIsPaused(true);
-    speakText("ጨዋታው ቋሞል", audioLanguage, true); // This is an announcement
+    speakText("ጨዋታው ቋሞል", audioLanguage, true);
     setTimeout(() => { onNav('create'); }, 1000);
   };
 
