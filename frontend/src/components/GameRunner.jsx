@@ -121,6 +121,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return prize.toFixed(2);
   })();
 
+  // --- THIS IS THE ROBUST WEBSOCKET AND TIMER LOGIC ---
   useEffect(() => {
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
@@ -131,22 +132,15 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
         const newNumber = data.number;
-        
         setCalledNumbers(prev => new Set(prev).add(newNumber));
-        setCurrentNumber(prevCurrent => {
-          if (prevCurrent !== null) {
-            setCallHistory(prevHistory => [prevCurrent, ...prevHistory]);
-          }
-          return newNumber;
-        });
-        
-        speakText(newNumber, audioLanguage, false); // It's a number, not an announcement
+        setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
+        speakText(newNumber, audioLanguage, false);
         setCountdown(callSpeed);
       }
     };
 
     socketRef.current.onopen = () => {
-        speakText("ጨዋታው ጀምሯል", audioLanguage, true); // This is an announcement
+        speakText("ጨዋታው ጀምሯል", audioLanguage, true);
         setIsPaused(false);
     };
     
@@ -171,20 +165,49 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return () => clearInterval(timerId);
   }, [isPaused, callSpeed]);
 
+  // --- THIS IS THE FINAL, CORRECTED SPEECH FUNCTION ---
   function speakText(textOrNumber, lang, isAnnouncement = false) {
-    if (!('speechSynthesis' in window)) return;
-
-    let textToSpeak = textOrNumber;
-    if (!isAnnouncement) {
-      textToSpeak = `${getBingoLetter(textOrNumber)} ${textOrNumber}`;
+    if (!('speechSynthesis' in window)) {
+      console.warn("Speech synthesis not supported.");
+      return;
     }
 
-    const msg = new SpeechSynthesisUtterance(textToSpeak);
+    // Cancel any previous speech to prevent overlap
+    window.speechSynthesis.cancel();
+
+    const textToSpeak = isAnnouncement ? textOrNumber : `${getBingoLetter(textOrNumber)} ${textOrNumber}`;
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    
+    const voices = window.speechSynthesis.getVoices();
+    let amharicVoice = null;
+
     if (lang === 'Amharic Male' || lang === 'Amharic Female') {
-      msg.lang = 'am-ET';
+      utterance.lang = 'am-ET';
+      // Try to find a specific Amharic voice
+      amharicVoice = voices.find(voice => voice.lang === 'am-ET');
+    } else {
+      utterance.lang = 'en-US'; // Default to English
     }
-    window.speechSynthesis.speak(msg);
+    
+    if (amharicVoice) {
+      utterance.voice = amharicVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
   }
+
+  // This effect warms up the speech synthesis engine.
+  useEffect(() => {
+    const handleVoicesChanged = () => {
+      // This is just to ensure the voices are loaded.
+      window.speechSynthesis.getVoices();
+    };
+    window.speechSynthesis.onvoiceschanged = handleVoicesChanged;
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
 
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
