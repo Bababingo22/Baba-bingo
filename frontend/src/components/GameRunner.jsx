@@ -79,8 +79,10 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentNumber, setCurrentNumber] = useState(null);
+  
+  // --- INJECTED CHANGE: callHistory is now the source of truth for called numbers in order ---
   const [callHistory, setCallHistory] = useState([]);
+  
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
@@ -98,27 +100,20 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const apiHost = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/^https?:\/\//, "").replace(/\/api$/, "");
     const url = `${wsProto}://${apiHost}/ws/game/${game.id}/?token=${token}`;
     socketRef.current = new WebSocket(url);
-
-    // --- INJECTED CHANGE START: Robust onmessage handler ---
+    
+    // --- INJECTED CHANGE: Simplified onmessage handler ---
     socketRef.current.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
         const newNumber = data.number;
         
         setCalledNumbers(prev => new Set(prev).add(newNumber));
-        
-        setCurrentNumber(prevCurrentNumber => {
-          if (prevCurrentNumber !== null) {
-            setCallHistory(prevHistory => [prevCurrentNumber, ...prevHistory].slice(0, 4));
-          }
-          return newNumber;
-        });
+        setCallHistory(prevHistory => [newNumber, ...prevHistory]);
         
         speakText(String(newNumber), audioLanguage);
         setCountdown(callSpeed);
       }
     };
-    // --- INJECTED CHANGE END ---
 
     socketRef.current.onopen = () => {
         speakText("ጨዋታው ጀምሯል", audioLanguage);
@@ -198,25 +193,21 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
             <div className="text-2xl font-bold text-green-400 text-center">
               {prizeAmount} Birr ደራሽ
             </div>
-            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center justify-center">
-              <div className="flex items-center justify-center gap-3">
-                {/* --- INJECTED CHANGE START: Instant History Display --- */}
-                {currentNumber && (
-                  <div className={`w-24 h-24 rounded-full border-4 flex items-center justify-center border-green-400`}>
-                    <span className="text-4xl font-bold text-white">{getBingoLetter(currentNumber)}{currentNumber}</span>
-                  </div>
+            {/* --- INJECTED CHANGE START: Full, Scrolling History --- */}
+            <div className="bg-[#1e2b3a] p-4 rounded-lg flex-1 flex items-center overflow-x-auto">
+              <div className="flex items-center justify-start gap-3">
+                {callHistory.length > 0 ? (
+                  callHistory.map((num, index) => (
+                    <div key={index} className={`w-24 h-24 rounded-full border-4 flex-shrink-0 flex items-center justify-center ${index === 0 ? 'border-green-400' : 'border-yellow-400'}`}>
+                      <span className="text-4xl font-bold text-white">{getBingoLetter(num)}{num}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500 w-full text-center">Previous numbers will appear here</div>
                 )}
-                {callHistory.map((num, index) => (
-                  <div key={index} className={`w-24 h-24 rounded-full border-4 flex items-center justify-center border-yellow-400`}>
-                    <span className="text-4xl font-bold text-white">{getBingoLetter(num)}{num}</span>
-                  </div>
-                ))}
-                {!currentNumber && callHistory.length === 0 && (
-                  <div className="text-gray-500">Previous numbers will appear here</div>
-                )}
-                {/* --- INJECTED CHANGE END --- */}
               </div>
             </div>
+            {/* --- INJECTED CHANGE END --- */}
           </div>
         </div>
       </div>
