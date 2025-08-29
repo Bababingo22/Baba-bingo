@@ -102,11 +102,14 @@ const NumberGrid = ({ calledNumbers }) => {
   );
 };
 
+// --- THIS IS THE FINAL, ROBUST AUDIO PLAYER ---
 const useLocalAudio = () => {
   const audioRef = useRef(new Audio());
   const play = (src) => {
     try {
-      audioRef.current.src = src;
+      // Create a new path to the audio file relative to the public directory
+      const audioSrc = new URL(`/audio/${src}`, window.location.origin).href;
+      audioRef.current.src = audioSrc;
       audioRef.current.play();
     } catch (error) {
       console.error(`Failed to play audio: ${src}`, error);
@@ -147,19 +150,19 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         const newNumber = data.number;
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
-        
-        // --- THIS IS THE FINAL, CORRECTED LINE ---
+
+        // --- THIS IS THE FINAL, CORRECTED LOGIC ---
         const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
-        const numberFile = `${getBingoLetter(newNumber)}${newNumber}`;
-        playAudio(`/audio/${voiceFolder}/${numberFile}.mp3`);
-        
+        const numberFile = `${getBingoLetter(newNumber)}${newNumber}.mp3`; // Add .mp3 extension
+        playAudio(`${voiceFolder}/${numberFile}`); // Pass the correct path fragment
+
         setCountdown(callSpeed);
       }
     };
 
     socketRef.current.onopen = () => {
       const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
-      playAudio(`/audio/${voiceFolder}/game_start.mp3`);
+      playAudio(`${voiceFolder}/game_start.mp3`);
       setIsPaused(false);
     };
     
@@ -196,7 +199,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const handleEndGame = () => {
     setIsPaused(true);
     const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
-    playAudio(`/audio/${voiceFolder}/game_end.mp3`);
+    playAudio(`${voiceFolder}/game_end.mp3`);
     setTimeout(() => { onNav('create'); }, 1500);
   };
 
