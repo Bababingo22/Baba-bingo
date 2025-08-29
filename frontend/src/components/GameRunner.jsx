@@ -10,6 +10,7 @@ const getBingoLetter = (number) => {
   return '';
 };
 
+// --- INJECTED CHANGE: New helper function for history colors ---
 const getLetterColorClass = (letter) => {
   switch (letter) {
     case 'B': return 'border-blue-500';
@@ -63,6 +64,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   );
 };
 
+// --- INJECTED CHANGE: This is the new, final NumberGrid ---
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
   const headerColors = ['bg-blue-600', 'bg-green-600', 'bg-yellow-500', 'bg-red-600', 'bg-purple-600'];
@@ -102,18 +104,22 @@ const NumberGrid = ({ calledNumbers }) => {
   );
 };
 
-// --- THIS IS THE FINAL, ROBUST AUDIO PLAYER ---
-const playAudio = (src) => {
-  try {
-    const audio = new Audio(src);
-    audio.play();
-  } catch (error) {
-    console.error(`Failed to play audio: ${src}`, error);
-  }
+// --- INJECTED CHANGE: New custom hook for playing your audio files ---
+const useLocalAudio = () => {
+  const audioRef = useRef(new Audio());
+  const play = (src) => {
+    try {
+      audioRef.current.src = src;
+      audioRef.current.play();
+    } catch (error) {
+      console.error(`Failed to play audio: ${src}`, error);
+    }
+  };
+  return play;
 };
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
-  const [calledNumbers, setCalledNumbers] useState(new Set(game.called_numbers || []));
+  const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -122,6 +128,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
+  const playAudio = useLocalAudio();
 
   const prizeAmount = (() => {
     if (!game || !user || !game.active_card_numbers) return '0.00';
@@ -137,6 +144,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     const url = `${wsProto}://${apiHost}/ws/game/${game.id}/?token=${token}`;
     socketRef.current = new WebSocket(url);
 
+    // --- INJECTED CHANGE: Use the local audio player ---
     socketRef.current.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
       if (data.action === "call_number") {
@@ -145,21 +153,21 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
         
         const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
-        const numberFile = `${getBingoLetter(newNumber)}${newNumber}.mp3`;
-        playAudio(`/audio/${voiceFolder}/${numberFile}`);
+        const numberFile = `${getBingoLetter(newNumber)}${newNumber}`;
+        playAudio(`/audio/${voiceFolder}/${numberFile}.mp3`);
         
         setCountdown(callSpeed);
       }
     };
 
     socketRef.current.onopen = () => {
-      const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
-      playAudio(`/audio/${voiceFolder}/game_start.mp3`);
-      setIsPaused(false);
+        const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
+        playAudio(`/audio/${voiceFolder}/game_start.mp3`);
+        setIsPaused(false);
     };
     
     return () => { if (socketRef.current) socketRef.current.close(); };
-  }, [game.id, token, audioLanguage, callSpeed]);
+  }, [game.id, token, audioLanguage, callSpeed, playAudio]); // Added playAudio dependency
 
   useEffect(() => {
     if (isPaused) return;
@@ -199,8 +207,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     <>
       {isModalVisible && <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />}
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
-        
-        {/* --- INJECTED CHANGE: Correct 30/70 Ratio --- */}
         <div className="h-[30%]"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
@@ -210,7 +216,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               <div className="text-gray-400 font-semibold">Next Number</div>
               <div className="text-8xl font-bold">{isPaused ? '-' : countdown}</div>
             </div>
-            <button onClick={() => setIsPaused(prev => !prev)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-blue-600' : 'bg-orange-500'}`}>{isPaused ? 'Resume' : 'Pause'}</button>
+            <button onClick={() => setIsPaused(prev => !prev)} className={`w-full py-3 rounded-lg font-bold text-xl ${isPaused ? 'bg-orange-500' : 'bg-blue-600'}`}>{isPaused ? 'Pause' : 'Resume'}</button>
             <div className="flex gap-2 mb-2">
               <input type="number" placeholder="Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-lg" />
               <button onClick={handleCheckCard} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded-md">Check</button>
