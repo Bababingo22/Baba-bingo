@@ -113,7 +113,7 @@ const playAudio = (src) => {
 };
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
-  const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
+  const [calledNumbers, setCalledNumbers] useState(new Set(game.called_numbers || []));
   const [isPaused, setIsPaused] = useState(true);
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -199,10 +199,12 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     <>
       {isModalVisible && <CardCheckModal checkResult={checkResult} calledNumbers={calledNumbers} onClose={() => setIsModalVisible(false)} />}
       <div className="bg-[#0f172a] text-white h-screen p-4 flex flex-col gap-4">
-        <div className="h-[35%]"> 
+        
+        {/* --- INJECTED CHANGE: Correct 30/70 Ratio --- */}
+        <div className="h-[30%]"> 
           <NumberGrid calledNumbers={calledNumbers} />
         </div>
-        <div className="h-[65%] grid grid-cols-[300px_1fr] gap-4">
+        <div className="h-[70%] grid grid-cols-[300px_1fr] gap-4">
           <div className="flex flex-col gap-4">
             <div className="bg-[#1e2b3a] p-4 rounded-lg text-center">
               <div className="text-gray-400 font-semibold">Next Number</div>
