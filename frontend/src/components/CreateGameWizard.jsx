@@ -4,7 +4,7 @@ import api from '../services/api';
 export default function CreateGameWizard({ onCreated }) {
   const [gameSpeed, setGameSpeed] = useState('Regular');
   const [betAmount, setBetAmount] = useState(10);
-  const [audioLanguage, setAudioLanguage] = useState('Amharic Male');
+  const [audioLanguage, setAudioLanguage] = useState('Amharic Male'); // This is now set
   const [callSpeed, setCallSpeed] = useState(10);
   const [winningPattern, setWinningPattern] = useState('All Common Patterns');
   const [selectedCards, setSelectedCards] = useState(new Set());
@@ -68,7 +68,8 @@ export default function CreateGameWizard({ onCreated }) {
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Audio Language</label>
             <select value={audioLanguage} onChange={(e) => setAudioLanguage(e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
-              <option>Amharic Male</option><option>Amharic Female</option>
+              <option>Amharic Male</option>
+              {/* Female option can be added back later */}
             </select>
           </div>
           <div>
@@ -78,7 +79,6 @@ export default function CreateGameWizard({ onCreated }) {
             </select>
           </div>
         </div>
-        
         <div className="bg-[#1e2b3a] p-4 rounded-lg">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -98,14 +98,9 @@ export default function CreateGameWizard({ onCreated }) {
             ))}
           </div>
         </div>
-
         {error && <div className="text-red-400 mt-4 text-center font-semibold">{error}</div>}
         <div className="mt-8 text-center">
-            <button 
-              type="submit" 
-              className="px-10 py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-600 disabled:bg-gray-500"
-              disabled={isLoading}
-            >
+            <button type="submit" className="px-10 py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-600 disabled:bg-gray-500" disabled={isLoading}>
               {isLoading ? 'Creating...' : 'Create Game'}
             </button>
         </div>
