@@ -103,19 +103,13 @@ const NumberGrid = ({ calledNumbers }) => {
 };
 
 // --- THIS IS THE FINAL, ROBUST AUDIO PLAYER ---
-const useLocalAudio = () => {
-  const audioRef = useRef(new Audio());
-  const play = (src) => {
-    try {
-      // Create a new path to the audio file relative to the public directory
-      const audioSrc = new URL(`/audio/${src}`, window.location.origin).href;
-      audioRef.current.src = audioSrc;
-      audioRef.current.play();
-    } catch (error) {
-      console.error(`Failed to play audio: ${src}`, error);
-    }
-  };
-  return play;
+const playAudio = (src) => {
+  try {
+    const audio = new Audio(src);
+    audio.play();
+  } catch (error) {
+    console.error(`Failed to play audio: ${src}`, error);
+  }
 };
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
@@ -128,7 +122,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
-  const playAudio = useLocalAudio();
 
   const prizeAmount = (() => {
     if (!game || !user || !game.active_card_numbers) return '0.00';
@@ -150,24 +143,23 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         const newNumber = data.number;
         setCalledNumbers(prev => new Set(prev).add(newNumber));
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
-
-        // --- THIS IS THE FINAL, CORRECTED LOGIC ---
+        
         const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
-        const numberFile = `${getBingoLetter(newNumber)}${newNumber}.mp3`; // Add .mp3 extension
-        playAudio(`${voiceFolder}/${numberFile}`); // Pass the correct path fragment
-
+        const numberFile = `${getBingoLetter(newNumber)}${newNumber}.mp3`;
+        playAudio(`/audio/${voiceFolder}/${numberFile}`);
+        
         setCountdown(callSpeed);
       }
     };
 
     socketRef.current.onopen = () => {
       const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
-      playAudio(`${voiceFolder}/game_start.mp3`);
+      playAudio(`/audio/${voiceFolder}/game_start.mp3`);
       setIsPaused(false);
     };
     
     return () => { if (socketRef.current) socketRef.current.close(); };
-  }, [game.id, token, audioLanguage, callSpeed, playAudio]);
+  }, [game.id, token, audioLanguage, callSpeed]);
 
   useEffect(() => {
     if (isPaused) return;
@@ -199,7 +191,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const handleEndGame = () => {
     setIsPaused(true);
     const voiceFolder = audioLanguage === 'Amharic Male' ? 'male' : 'female';
-    playAudio(`${voiceFolder}/game_end.mp3`);
+    playAudio(`/audio/${voiceFolder}/game_end.mp3`);
     setTimeout(() => { onNav('create'); }, 1500);
   };
 
