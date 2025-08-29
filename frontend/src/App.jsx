@@ -4,9 +4,9 @@ import CreateGameWizard from './components/CreateGameWizard';
 import GameRunner from './components/GameRunner';
 import Sidebar from './components/Sidebar';
 import TransactionHistory from './components/TransactionHistory';
+import MainLayout from './components/MainLayout';
 import api, { setToken } from './services/api';
 
-// Helper function to safely get data from localStorage
 const getInitialGameState = () => {
   try {
     const savedState = localStorage.getItem('yabaBingoGameState');
@@ -31,7 +31,6 @@ export default function App() {
     if (t) {
       setToken(t);
       setTokenState(t);
-      
       Promise.all([
         api.get('/me/'),
         api.get('/games/history/'),
@@ -49,9 +48,7 @@ export default function App() {
         localStorage.clear();
         setToken(null);
         setAuthed(false);
-      }).finally(() => {
-        setIsLoading(false);
-      });
+      }).finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
     }
@@ -108,18 +105,15 @@ export default function App() {
   }
 
   return (
-    <div className="flex bg-[#0f172a] text-white min-h-screen">
-      <Sidebar 
-        user={user} 
-        gameHistory={gameHistory}
-        onNav={handleNav}
-        isExpanded={isSidebarExpanded}
-        onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
-      />
-      <main className="flex-1 overflow-y-auto">
-        {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
-        {view === 'report' && <TransactionHistory />}
-      </main>
-    </div>
+    <MainLayout
+      user={user}
+      gameHistory={gameHistory}
+      onNav={handleNav}
+      isExpanded={isSidebarExpanded}
+      onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
+    >
+      {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
+      {view === 'report' && <TransactionHistory />}
+    </MainLayout>
   );
 }
