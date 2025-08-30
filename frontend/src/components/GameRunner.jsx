@@ -21,13 +21,43 @@ const getLetterColorClass = (letter) => {
   }
 };
 
+/* Helper to coerce various truthy/falsey winner signals into a boolean */
+const parseBooleanLike = (v) => {
+  if (v === undefined || v === null) return false;
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v === 1;
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes' || s === 'win' || s === 'won' || s === 'winner';
+  }
+  return false;
+};
+
 const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   if (!checkResult || !checkResult.card_data) return null;
-  const { is_winner, card_data } = checkResult;
+
+  // Support multiple possible response shapes from backend
+  const isWinner =
+    parseBooleanLike(checkResult.is_winner) ||
+    parseBooleanLike(checkResult.winner) ||
+    parseBooleanLike(checkResult.card_data?.is_winner) ||
+    (typeof checkResult.result === 'string' && checkResult.result.toLowerCase().includes('win'));
+
+  const { card_data } = checkResult;
   const { card_number, board } = card_data;
   const headers = ['B', 'I', 'N', 'G', 'O'];
   const colors = ['bg-blue-500', 'bg-red-500', 'bg-orange-400', 'bg-green-500', 'bg-purple-500'];
   const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => board[c][r]));
+
+  const isCellCalled = (cellValue) => {
+    if (cellValue === 'FREE') return false;
+    // board cells may be numbers or strings; normalize to number when possible
+    const numeric = Number(cellValue);
+    if (!Number.isNaN(numeric)) {
+      return calledNumbers.has(numeric);
+    }
+    return calledNumbers.has(cellValue);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-label="Card check result">
@@ -40,8 +70,8 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
           <button onClick={onClose} aria-label="Close" className="text-gray-300 hover:text-white">✕</button>
         </header>
 
-        <div className={`p-3 rounded-md mb-4 ${is_winner ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-          <h3 className="text-center text-2xl font-bold">{is_winner ? 'ዘግቷል' : 'አልዘጋም'}</h3>
+        <div className={`p-3 rounded-md mb-4 ${isWinner ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+          <h3 className="text-center text-2xl font-bold">{isWinner ? 'ዘግቷል' : 'አልዘጋም'}</h3>
         </div>
 
         <div className="overflow-auto">
@@ -57,17 +87,17 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
               {rows.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                   {row.map((cellValue, colIndex) => {
-                    const isCalled = cellValue !== "FREE" && calledNumbers.has(cellValue);
                     const isFreeSpace = cellValue === "FREE";
-                    const cellClass = isCalled
-                      ? 'bg-yellow-400 text-black shadow-[0_0_14px_rgba(250,204,21,0.85)] scale-105'
+                    const called = isCellCalled(cellValue);
+                    const cellClass = called
+                      ? 'bg-yellow-400 text-black shadow-[0_0_18px_rgba(250,204,21,0.85)] scale-105 transition-transform duration-200'
                       : isFreeSpace
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-200 text-black';
                     return (
                       <td
                         key={`${colIndex}-${rowIndex}`}
-                        className={`text-center font-semibold text-lg h-14 rounded-md transition-transform duration-200 ${cellClass}`}
+                        className={`text-center font-semibold text-lg h-14 rounded-md ${cellClass}`}
                       >
                         {isFreeSpace ? '★' : cellValue}
                       </td>
@@ -114,12 +144,12 @@ const NumberGrid = ({ calledNumbers }) => {
                   const num = colIndex * 15 + rowIndex + 1;
                   const isCalled = calledNumbers.has(num);
                   const cellClass = isCalled
-                    ? 'bg-yellow-400 text-black shadow-[0_0_14px_rgba(250,204,21,0.85)] transform scale-105'
+                    ? 'bg-yellow-400 text-black shadow-[0_0_18px_rgba(250,204,21,0.85)] transform scale-105 transition-all duration-200'
                     : 'bg-transparent text-gray-300';
                   return (
                     <td
                       key={num}
-                      className={`text-center font-semibold text-base transition-all duration-200 py-2 rounded ${cellClass}`}
+                      className={`text-center font-semibold text-base py-2 rounded ${cellClass}`}
                       aria-pressed={isCalled}
                     >
                       {num}
@@ -258,7 +288,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-[420px_1fr] gap-6">
-            {/* Left column */}
             <div className="flex flex-col gap-4">
               <NumberGrid calledNumbers={calledNumbers} />
 
@@ -276,7 +305,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
               </div>
             </div>
 
-            {/* Right column */}
             <div className="flex flex-col gap-4">
               <div className="bg-[#0f172a] p-4 rounded-lg shadow-sm flex flex-col md:flex-row items-center md:items-stretch gap-4">
                 <div className="flex-0 md:w-44 w-full">
