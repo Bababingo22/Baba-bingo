@@ -36,7 +36,6 @@ const parseBooleanLike = (v) => {
 const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   if (!checkResult || !checkResult.card_data) return null;
 
-  // Support multiple possible response shapes from backend
   const isWinner =
     parseBooleanLike(checkResult.is_winner) ||
     parseBooleanLike(checkResult.winner) ||
@@ -51,7 +50,6 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
 
   const isCellCalled = (cellValue) => {
     if (cellValue === 'FREE') return false;
-    // board cells may be numbers or strings; normalize to number when possible
     const numeric = Number(cellValue);
     if (!Number.isNaN(numeric)) {
       return calledNumbers.has(numeric);
@@ -89,8 +87,9 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
                   {row.map((cellValue, colIndex) => {
                     const isFreeSpace = cellValue === "FREE";
                     const called = isCellCalled(cellValue);
+                    // Called numbers: no yellow background, only yellow text + glow/shadow
                     const cellClass = called
-                      ? 'bg-yellow-400 text-black shadow-[0_0_18px_rgba(250,204,21,0.85)] scale-105 transition-transform duration-200'
+                      ? 'bg-transparent text-yellow-400 font-bold shadow-[0_0_12px_rgba(250,204,21,0.9)] scale-105 transition-all duration-200'
                       : isFreeSpace
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-200 text-black';
@@ -143,8 +142,9 @@ const NumberGrid = ({ calledNumbers }) => {
                 {Array.from({ length: 5 }).map((_, colIndex) => {
                   const num = colIndex * 15 + rowIndex + 1;
                   const isCalled = calledNumbers.has(num);
+                  // Only the number glows (yellow text + shadow), no yellow background
                   const cellClass = isCalled
-                    ? 'bg-yellow-400 text-black shadow-[0_0_18px_rgba(250,204,21,0.85)] transform scale-105 transition-all duration-200'
+                    ? 'bg-transparent text-yellow-400 font-bold shadow-[0_0_12px_rgba(250,204,21,0.9)] transform scale-105 transition-all duration-200'
                     : 'bg-transparent text-gray-300';
                   return (
                     <td
