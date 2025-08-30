@@ -1,5 +1,3 @@
-GitHub Copilot Chat Assistant — updated GameRunner.jsx (ready to copy and paste)
-
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 
