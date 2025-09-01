@@ -4,39 +4,20 @@ import api from '../services/api';
 const WEEKDAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const WEEKDAYS_FULL  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
-/**
- * Sidebar.jsx
- *
- * Behavior/requirements implemented:
- * - Profile button opens a compact popup (contains Profile and Log out).
- * - Tapping the profile button will open the popup and will EXPAND the sidebar if it was collapsed.
- *   (If sidebar is already expanded, tapping profile toggles the popup only.)
- * - The separate arrow expand/collapse button was removed.
- * - Weekly profit is fetched from /profit_report/?start=YYYY-MM-DD&end=YYYY-MM-DD for current calendar week (Mon→Sun).
- * - The collapsed weekly widget is not clickable except the explicit "Open" button which calls onNav('report').
- * - Expanded weekly rows are not clickable; only the "Open Report" button navigates.
- * - Footer still contains Settings and Log Out.
- *
- * Props:
- * - user: user object (username, email, operational_credit)
- * - gameHistory: recent games array
- * - onNav: function(route) - used to navigate, e.g. onNav('report') or onNav('profile')
- * - isExpanded: boolean - whether the sidebar is expanded (controlled by parent)
- * - onToggle: function() - parent callback to toggle sidebar expanded state
- */
-export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {}, isExpanded = false, onToggle = () => {} }) {
-  const [profileOpen, setProfileOpen] = useState(false);
-  const menuRef = useRef(null);
+export default function Sidebar({
+  user = {},
+  gameHistory = [],
+  onNav = () => {},
+  isExpanded = false,    // controlled by parent
+  onToggle = () => {}    // called to toggle expandedRef = useRef(null);
 
   // weekly profit state
-  const [weekData, setWeekData] = useState([]); // { date, weekdayShort, weekdayFull, regular_profit, mtn_profit, total_profit }
+  const [weekData, setWeekData] = useState([]);
   const [weekLoading, setWeekLoading] = useState(true);
   const [weekError, setWeekError] = useState(null);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.reload();
-  };
+  const avatarInitial = (user.username && user.username[0]) ? user.username[0].toUpperCase() : 'U';
+  const totalGames = Array.isArray(gameHistory) ? gameHistory.length : 0;
 
   const formatCurrency = (val) => {
     if (val === null || val === undefined || val === '') return '—';
@@ -45,10 +26,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
     return n.toFixed(2) + ' Birr';
   };
 
-  const avatarInitial = (user.username && user.username[0]) ? user.username[0].toUpperCase() : 'U';
-  const totalGames = Array.isArray(gameHistory) ? gameHistory.length : 0;
-
-  // Close profile popup when clicking outside
+  // Close profile popup if user clicks outside (does NOT auto-collapse sidebar)
   useEffect(() => {
     function onDocClick(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -61,7 +39,6 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
 
   // --- helpers for week range and formatting ---
   function toLocalISODate(d) {
-    // produce YYYY-MM-DD in local timezone
     const tzOffset = d.getTimezoneOffset() * 60000;
     return new Date(d - tzOffset).toISOString().slice(0, 10);
   }
@@ -127,18 +104,31 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
     return () => { cancelled = true; };
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.reload();
+  };
+
   // Explicit open action only (prevents accidental navigation)
   const openProfitReport = (e) => {
     e?.preventDefault?.();
     onNav('report');
   };
 
-  // When profile button is tapped:
-  // - open/close popup
-  // - if sidebar is collapsed, expand it via parent's onToggle() (do not collapse when already expanded)
+  // Profile button behavior:
+  // - If collapsed -> expand sidebar and open popup
+  // - If expanded  -> collapse sidebar (and close popup)
+  // This matches: tap to show sidebar, tap again to close and show full create page.
   const handleProfileTap = () => {
-    setProfileOpen(prev => !prev);
     if (!isExpanded) {
+      // expand
+      onToggle();
+      // wait for parent expansion animation (approx), then show popup
+      // 250ms matches Tailwind transition duration used in Sidebar
+      setTimeout(() => setProfileOpen(true), 260);
+    } else {
+      // close popup then collapse sidebar
+      setProfileOpen(false);
       onToggle();
     }
   };
@@ -149,7 +139,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
         ${isExpanded ? 'w-80 z-40 bg-[#1e2b3a] shadow-xl' : 'w-16 z-10 bg-[#1e2b3a]/95'}`}
       aria-expanded={isExpanded}
     >
-      {/* Top bar: profile button (now toggles expansion/popup) */}
+      {/* Top bar: profile button toggles sidebar + popup */}
       <div className="flex items-center justify-between p-3">
         <div className="relative" ref={menuRef}>
           <button
@@ -162,9 +152,10 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
             {avatarInitial}
           </button>
 
-          {profileOpen && (
+          {profileOpen && isExpanded && (
+            // compact popup menu: contains only Profile (no Log out here)
             <div
-              className={`absolute left-0 mt-2 rounded-md bg-[#0f172a] border border-gray-700 shadow-lg text-sm py-2 w-44 z-50`}
+              className="absolute left-0 mt-2 rounded-md bg-[#0f172a] border border-gray-700 shadow-lg text-sm py-2 w-44 z-50"
               role="menu"
             >
               <div className="px-3 py-2">
@@ -180,23 +171,18 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
                 >
                   Profile
                 </button>
-                <button
-                  onClick={() => { setProfileOpen(false); handleLogout(); }}
-                  className="px-3 py-2 text-left hover:bg-gray-800 text-sm text-red-400"
-                  role="menuitem"
-                >
-                  Log out
-                </button>
+                {/* Removed "Log out" from popup to avoid duplication.
+                    Log out remains in footer when sidebar is expanded. */}
               </div>
             </div>
           )}
         </div>
 
-        {/* placeholder for spacing (arrow removed) */}
+        {/* spacing placeholder (arrow removed) */}
         <div style={{ width: 40 }} />
       </div>
 
-      {/* Collapsed weekly widget (not clickable; explicit Open button only) */}
+      {/* Collapsed weekly widget (shows minimal info). Not clickable except explicit Open button */}
       {!isExpanded && (
         <div className="flex-0 flex flex-col items-center space-y-1 py-2 px-1">
           {weekLoading && <div className="text-xs text-gray-400">..</div>}
@@ -215,7 +201,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
         </div>
       )}
 
-      {/* Scrollable content (expanded only; uses opacity toggle) */}
+      {/* Expanded content (only visible when sidebar expanded) */}
       <div className={`flex-1 overflow-y-auto px-3 transition-opacity duration-200 ${isExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <nav className="flex flex-col space-y-2 mb-6">
           <button onClick={() => onNav('create')} className="p-3 text-left bg-gray-700 rounded-md font-semibold">Dashboard</button>
@@ -237,7 +223,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
           </div>
         </div>
 
-        {/* Expanded weekly profit widget (rows NOT clickable; only "Open Report" button navigates) */}
+        {/* Expanded weekly profit widget */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-400">Week Profit</h3>
@@ -246,14 +232,8 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
 
           <div className="bg-[#121827] border border-gray-700 rounded-md overflow-hidden">
             <div className="divide-y divide-gray-800">
-              {weekLoading && (
-                <div className="p-3 text-sm text-gray-400">Loading...</div>
-              )}
-
-              {!weekLoading && weekError && (
-                <div className="p-3 text-sm text-red-400">{weekError}</div>
-              )}
-
+              {weekLoading && <div className="p-3 text-sm text-gray-400">Loading...</div>}
+              {!weekLoading && weekError && <div className="p-3 text-sm text-red-400">{weekError}</div>}
               {!weekLoading && !weekError && weekData.map((d) => (
                 <div key={d.date} className="flex items-center justify-between px-3 py-2">
                   <div className="flex flex-col">
@@ -270,6 +250,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
           </div>
         </div>
 
+        {/* Recent games */}
         <div>
           <h3 className="text-lg font-semibold text-gray-400 mb-3">Recent Games</h3>
           <table className="w-full text-sm text-left">
@@ -307,7 +288,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
         </div>
       </div>
 
-      {/* Footer area: only visible when expanded */}
+      {/* Footer area: only visible when expanded. Log out stays here. */}
       <div className={`p-3 ${isExpanded ? 'block' : 'hidden'}`}>
         <button onClick={() => onNav('settings')} className="w-full py-2 mb-2 bg-gray-800 rounded-md hover:bg-gray-700">Settings</button>
         <button onClick={handleLogout} className="w-full py-2 bg-red-500 rounded-md hover:bg-red-600">Log Out</button>
