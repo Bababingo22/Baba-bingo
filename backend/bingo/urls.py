@@ -20,6 +20,5 @@ urlpatterns = [
     path("games/<int:pk>/", GameDetailView.as_view(), name="game_detail"),
     path("me/", CurrentUserView.as_view(), name="me"),
     path("profit_report/", ProfitReportView.as_view(), name="profit_report"),
-    # --- THIS IS THE FINAL, CORRECT URL FOR THE WIN-CHECKER ---
     path("check_win/<int:game_id>/<int:card_number>/", CheckWinView.as_view(), name="check_win"),
 ]
