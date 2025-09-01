@@ -1,71 +1,117 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import api from '../services/api';
 
-export default function Sidebar({ user, gameHistory, onNav, isExpanded, onToggle }) {
+export default function ProfitReport() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.reload();
+  const formatMoney = (val) => {
+    if (val === null || val === undefined || val === '') return '—';
+    const n = Number(val);
+    if (Number.isNaN(n)) return '—';
+    return n.toFixed(2) + ' Birr';
+  };
+
+  const fetchReport = async (params = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get('/profit_report/', { params });
+      setRows(res.data || []);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to load profit report.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
+  const onFilter = (e) => {
+    e.preventDefault();
+    const params = {};
+    if (start) params.start = start;
+    if (end) params.end = end;
+    fetchReport(params);
   };
 
   return (
-    <div className={`bg-[#1e2b3a] p-4 flex flex-col h-screen text-white border-r border-gray-700 transition-all duration-300 ${isExpanded ? 'w-80' : 'w-24'}`}>
-      
-      {/* User Profile / Toggle Button */}
-      <button 
-        onClick={onToggle} 
-        className="flex items-center space-x-4 p-2 rounded-lg hover:bg-gray-700 w-full text-left mb-8 flex-shrink-0"
-      >
-        <div className="w-12 h-12 bg-gray-600 rounded-full flex-shrink-0 flex items-center justify-center text-xl font-bold">
-          {user.username.charAt(0).toUpperCase()}
-        </div>
-        {isExpanded && <div><div className="font-bold text-lg">{user.username}</div></div>}
-      </button>
+    <div className="p-6 bg-[#0f172a] text-white min-h-screen">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Profit Report</h1>
+        <form onSubmit={onFilter} className="flex items-center space-x-2">
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="bg-[#0b1220] border border-gray-700 px-3 py-2 rounded text-sm"
+            placeholder="Start"
+          />
+          <input
+            type="date"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            className="bg-[#0b1220] border border-gray-700 px-3 py-2 rounded text-sm"
+            placeholder="End"
+          />
+          <button
+            type="submit"
+            className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-sm font-medium"
+          >
+            Apply
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStart('');
+              setEnd('');
+              fetchReport();
+            }}
+            className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm font-medium"
+          >
+            Reset
+          </button>
+        </form>
+      </div>
 
-      {/* Main Content (Scrollable and Collapsible) */}
-      <div className={`flex-1 overflow-y-auto overflow-x-hidden transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
-        <nav className="flex flex-col space-y-2 mb-8">
-          <button onClick={() => onNav('create')} className="p-3 text-left bg-gray-700 rounded-md font-semibold">Dashboard</button>
-          <button onClick={() => onNav('report')} className="p-3 text-left hover:bg-gray-700 rounded-md">Report</button>
-          <button onClick={() => alert('Online Games coming soon!')} className="p-3 text-left hover:bg-gray-700 rounded-md">Online Games</button>
-        </nav>
+      {loading && <div className="p-6">Loading...</div>}
+      {error && <div className="p-6 text-red-400">{error}</div>}
 
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-400 mb-4">Statistics</h3>
-          <div className="space-y-4">
-            <div className="bg-gray-900 p-4 rounded-lg">
-              <div className="text-gray-500">Total Games</div>
-              <div className="text-2xl font-bold">{gameHistory.length}</div>
-            </div>
-            <div className="bg-gray-900 p-4 rounded-lg">
-              <div className="text-gray-500">Wallet</div>
-              <div className="text-2xl font-bold">{Number(user.operational_credit).toFixed(2)} Birr</div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-semibold text-gray-400 mb-4">Recent Games</h3>
-          <table className="w-full text-sm text-left">
-            <thead className="text-gray-400">
-              <tr><th className="p-2">Date</th><th className="p-2">Bet</th><th className="p-2">Status</th></tr>
+      {!loading && !error && (
+        <div className="bg-[#1e2b3a] rounded-lg shadow-lg overflow-auto">
+          <table className="min-w-full">
+            <thead className="bg-gray-700">
+              <tr>
+                <th className="p-4 text-left text-sm font-semibold uppercase">Date</th>
+                <th className="p-4 text-right text-sm font-semibold uppercase">Regular Profit</th>
+                <th className="p-4 text-right text-sm font-semibold uppercase">MTN Profit</th>
+                <th className="p-4 text-right text-sm font-semibold uppercase">Total Profit</th>
+              </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700">
-              {gameHistory.slice(0, 5).map(game => (
-                <tr key={game.id}><td className="p-2">{new Date(game.created_at).toLocaleDateString()}</td><td className="p-2">{Number(game.amount).toFixed(0)} Birr</td><td className="p-2">{game.status}</td></tr>
+            <tbody className="divide-y divide-gray-800">
+              {rows.length === 0 && (
+                <tr>
+                  <td className="p-6" colSpan="4">No data</td>
+                </tr>
+              )}
+              {rows.map((r) => (
+                <tr key={r.date}>
+                  <td className="p-4 whitespace-nowrap">{r.date}</td>
+                  <td className="p-4 text-right">{formatMoney(r.regular_profit)}</td>
+                  <td className="p-4 text-right">{formatMoney(r.mtn_profit)}</td>
+                  <td className="p-4 text-right font-semibold">{formatMoney(r.total_profit)}</td>
+                </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Logout Button */}
-      <div className="flex-shrink-0">
-        {isExpanded && (
-          <button onClick={handleLogout} className="w-full mt-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600">
-            Log Out
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 }
