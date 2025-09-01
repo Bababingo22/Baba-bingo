@@ -9,7 +9,11 @@ export default function Sidebar({
   gameHistory = [],
   onNav = () => {},
   isExpanded = false,    // controlled by parent
-  onToggle = () => {}    // called to toggle expandedRef = useRef(null);
+  onToggle = () => {}    // called to toggle expanded state
+}) {
+  // profile popup
+  const [profileOpen, setProfileOpen] = useState(false);
+  const menuRef = useRef(null);
 
   // weekly profit state
   const [weekData, setWeekData] = useState([]);
@@ -26,7 +30,7 @@ export default function Sidebar({
     return n.toFixed(2) + ' Birr';
   };
 
-  // Close profile popup if user clicks outside (does NOT auto-collapse sidebar)
+  // Close profile popup when clicking outside (does NOT auto-collapse sidebar)
   useEffect(() => {
     function onDocClick(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -118,16 +122,16 @@ export default function Sidebar({
   // Profile button behavior:
   // - If collapsed -> expand sidebar and open popup
   // - If expanded  -> collapse sidebar (and close popup)
-  // This matches: tap to show sidebar, tap again to close and show full create page.
+  // Tap toggles sidebar; popup only shown when expanded
   const handleProfileTap = () => {
     if (!isExpanded) {
-      // expand
+      // expand the sidebar
       onToggle();
-      // wait for parent expansion animation (approx), then show popup
-      // 250ms matches Tailwind transition duration used in Sidebar
+      // open popup slightly after expansion finishes so it isn't cut off
+      // tune timeout to match your CSS transition (duration-300 by default)
       setTimeout(() => setProfileOpen(true), 260);
     } else {
-      // close popup then collapse sidebar
+      // if expanded, close popup and collapse
       setProfileOpen(false);
       onToggle();
     }
@@ -153,7 +157,6 @@ export default function Sidebar({
           </button>
 
           {profileOpen && isExpanded && (
-            // compact popup menu: contains only Profile (no Log out here)
             <div
               className="absolute left-0 mt-2 rounded-md bg-[#0f172a] border border-gray-700 shadow-lg text-sm py-2 w-44 z-50"
               role="menu"
@@ -171,18 +174,17 @@ export default function Sidebar({
                 >
                   Profile
                 </button>
-                {/* Removed "Log out" from popup to avoid duplication.
-                    Log out remains in footer when sidebar is expanded. */}
+                {/* Log out removed from popup to avoid duplication; footer contains logout when expanded */}
               </div>
             </div>
           )}
         </div>
 
-        {/* spacing placeholder (arrow removed) */}
+        {/* placeholder for spacing (arrow removed) */}
         <div style={{ width: 40 }} />
       </div>
 
-      {/* Collapsed weekly widget (shows minimal info). Not clickable except explicit Open button */}
+      {/* Collapsed weekly widget (minimal info) */}
       {!isExpanded && (
         <div className="flex-0 flex flex-col items-center space-y-1 py-2 px-1">
           {weekLoading && <div className="text-xs text-gray-400">..</div>}
@@ -288,7 +290,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Footer area: only visible when expanded. Log out stays here. */}
+      {/* Footer area: only visible when expanded. Log out remains here. */}
       <div className={`p-3 ${isExpanded ? 'block' : 'hidden'}`}>
         <button onClick={() => onNav('settings')} className="w-full py-2 mb-2 bg-gray-800 rounded-md hover:bg-gray-700">Settings</button>
         <button onClick={handleLogout} className="w-full py-2 bg-red-500 rounded-md hover:bg-red-600">Log Out</button>
