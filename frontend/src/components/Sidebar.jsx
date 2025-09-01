@@ -4,6 +4,26 @@ import api from '../services/api';
 const WEEKDAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const WEEKDAYS_FULL  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
+/**
+ * Sidebar.jsx
+ *
+ * Behavior/requirements implemented:
+ * - Profile button opens a compact popup (contains Profile and Log out).
+ * - Tapping the profile button will open the popup and will EXPAND the sidebar if it was collapsed.
+ *   (If sidebar is already expanded, tapping profile toggles the popup only.)
+ * - The separate arrow expand/collapse button was removed.
+ * - Weekly profit is fetched from /profit_report/?start=YYYY-MM-DD&end=YYYY-MM-DD for current calendar week (Mon→Sun).
+ * - The collapsed weekly widget is not clickable except the explicit "Open" button which calls onNav('report').
+ * - Expanded weekly rows are not clickable; only the "Open Report" button navigates.
+ * - Footer still contains Settings and Log Out.
+ *
+ * Props:
+ * - user: user object (username, email, operational_credit)
+ * - gameHistory: recent games array
+ * - onNav: function(route) - used to navigate, e.g. onNav('report') or onNav('profile')
+ * - isExpanded: boolean - whether the sidebar is expanded (controlled by parent)
+ * - onToggle: function() - parent callback to toggle sidebar expanded state
+ */
 export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {}, isExpanded = false, onToggle = () => {} }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
@@ -21,11 +41,14 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
   const formatCurrency = (val) => {
     if (val === null || val === undefined || val === '') return '—';
     const n = Number(val);
-    if (isNaN(n)) return '—';
+    if (Number.isNaN(n)) return '—';
     return n.toFixed(2) + ' Birr';
   };
 
-  // close profile menu when clicking outside
+  const avatarInitial = (user.username && user.username[0]) ? user.username[0].toUpperCase() : 'U';
+  const totalGames = Array.isArray(gameHistory) ? gameHistory.length : 0;
+
+  // Close profile popup when clicking outside
   useEffect(() => {
     function onDocClick(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -36,10 +59,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const avatarInitial = (user.username && user.username[0]) ? user.username[0].toUpperCase() : 'U';
-  const totalGames = Array.isArray(gameHistory) ? gameHistory.length : 0;
-
-  // --- Helpers for weekly profit ---
+  // --- helpers for week range and formatting ---
   function toLocalISODate(d) {
     // produce YYYY-MM-DD in local timezone
     const tzOffset = d.getTimezoneOffset() * 60000;
@@ -49,8 +69,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
   const computeWeekRange = () => {
     const today = new Date();
     const day = today.getDay(); // 0 Sun .. 6 Sat
-    // distance from Monday:
-    const diffToMon = (day + 6) % 7; // Monday => 0
+    const diffToMon = (day + 6) % 7; // 0 if Monday
     const monday = new Date(today);
     monday.setDate(today.getDate() - diffToMon);
     monday.setHours(0,0,0,0);
@@ -63,6 +82,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
     return days;
   };
 
+  // Fetch weekly profit for current calendar week (Mon→Sun)
   useEffect(() => {
     let cancelled = false;
     const days = computeWeekRange();
@@ -75,12 +95,10 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
       try {
         const res = await api.get('/profit_report/', { params: { start, end } });
         const rows = Array.isArray(res.data) ? res.data : [];
-
         const byDate = rows.reduce((acc, cur) => {
           if (cur && cur.date) acc[cur.date] = cur;
           return acc;
         }, {});
-
         const mapped = days.map((d, idx) => {
           const iso = toLocalISODate(d);
           const row = byDate[iso] || null;
@@ -93,7 +111,6 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
             total_profit: row ? row.total_profit : null,
           };
         });
-
         if (!cancelled) setWeekData(mapped);
       } catch (err) {
         console.error('Failed to fetch weekly profit', err);
@@ -108,7 +125,7 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
 
     fetchWeek();
     return () => { cancelled = true; };
-  }, []); // fetch once on mount for the current calendar week
+  }, []);
 
   // Explicit open action only (prevents accidental navigation)
   const openProfitReport = (e) => {
@@ -116,18 +133,27 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
     onNav('report');
   };
 
+  // When profile button is tapped:
+  // - open/close popup
+  // - if sidebar is collapsed, expand it via parent's onToggle() (do not collapse when already expanded)
+  const handleProfileTap = () => {
+    setProfileOpen(prev => !prev);
+    if (!isExpanded) {
+      onToggle();
+    }
+  };
+
   return (
-    // Make sidebar overlay when expanded so it doesn't push the wizard; collapsed stays slim
     <div
       className={`fixed left-0 top-0 h-screen text-white border-r border-gray-700 transition-all duration-300 flex flex-col
         ${isExpanded ? 'w-80 z-40 bg-[#1e2b3a] shadow-xl' : 'w-16 z-10 bg-[#1e2b3a]/95'}`}
       aria-expanded={isExpanded}
     >
-      {/* Top bar: avatar + expand/collapse toggle */}
+      {/* Top bar: profile button (now toggles expansion/popup) */}
       <div className="flex items-center justify-between p-3">
         <div className="relative" ref={menuRef}>
           <button
-            onClick={() => setProfileOpen(prev => !prev)}
+            onClick={handleProfileTap}
             aria-haspopup="menu"
             aria-expanded={profileOpen}
             className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-xl font-bold focus:outline-none"
@@ -137,7 +163,6 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
           </button>
 
           {profileOpen && (
-            // compact popup menu: minimal width, inline items to reduce screen usage
             <div
               className={`absolute left-0 mt-2 rounded-md bg-[#0f172a] border border-gray-700 shadow-lg text-sm py-2 w-44 z-50`}
               role="menu"
@@ -167,33 +192,23 @@ export default function Sidebar({ user = {}, gameHistory = [], onNav = () => {},
           )}
         </div>
 
-        <button
-          onClick={() => { setProfileOpen(false); onToggle(); }}
-          aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-          className="w-10 h-10 rounded-md flex items-center justify-center hover:bg-gray-700 focus:outline-none"
-          title={isExpanded ? 'Collapse' : 'Expand'}
-        >
-          <svg className={`w-5 h-5 transform ${isExpanded ? '' : 'rotate-180'}`} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7 5l6 5-6 5V5z" fill="currentColor" />
-          </svg>
-        </button>
+        {/* placeholder for spacing (arrow removed) */}
+        <div style={{ width: 40 }} />
       </div>
 
-      {/* Compact weekly widget shown when sidebar is collapsed */}
+      {/* Collapsed weekly widget (not clickable; explicit Open button only) */}
       {!isExpanded && (
         <div className="flex-0 flex flex-col items-center space-y-1 py-2 px-1">
           {weekLoading && <div className="text-xs text-gray-400">..</div>}
           {weekError && <div className="text-xs text-red-400">!</div>}
           {!weekLoading && !weekError && (
             <div className="w-full flex flex-col items-center gap-1">
-              {/* small vertical list but NOT clickable by default */}
               {weekData.map((d) => (
                 <div key={d.date} className="w-full flex items-center justify-center text-center">
                   <div className="text-[10px] text-gray-300 leading-none">{d.weekdayShort}</div>
                   <div className="text-[10px] text-yellow-400 leading-none mt-0.5">{d.total_profit !== null ? Number(d.total_profit).toFixed(0) : '—'}</div>
                 </div>
               ))}
-              {/* explicit small open button */}
               <button onClick={openProfitReport} className="mt-1 text-xs text-blue-300 hover:underline">Open</button>
             </div>
           )}
