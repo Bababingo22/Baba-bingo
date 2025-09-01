@@ -39,20 +39,39 @@ export default function TransactionHistory() {
               <th className="p-4 text-left text-sm font-semibold uppercase">Amount</th>
               <th className="p-4 text-left text-sm font-semibold uppercase">Running Balance</th>
               <th className="p-4 text-left text-sm font-semibold uppercase">Note</th>
+              <th className="p-4 text-left text-sm font-semibold uppercase">Regular Profit</th>
+              <th className="p-4 text-left text-sm font-semibold uppercase">MTN Profit</th>
+              <th className="p-4 text-left text-sm font-semibold uppercase">Total Profit</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
-            {transactions.map(tx => (
-              <tr key={tx.id}>
-                <td className="p-4 whitespace-nowrap">{new Date(tx.timestamp).toLocaleString()}</td>
-                <td className="p-4">{tx.type_display}</td>
-                <td className={`p-4 font-bold ${Number(tx.amount) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {Number(tx.amount).toFixed(2)} Birr
-                </td>
-                <td className="p-4">{Number(tx.running_balance).toFixed(2)} Birr</td>
-                <td className="p-4">{tx.note}</td>
-              </tr>
-            ))}
+            {transactions.map(tx => {
+              const timestamp = tx.timestamp ? new Date(tx.timestamp).toLocaleString() : '—';
+              const typeLabel = tx.type_display || tx.type || '—';
+              const amount = Number(tx.amount) || 0;
+              const running = Number(tx.running_balance) || 0;
+              const method = (tx.method || tx.payment_method || tx.channel || '').toString();
+              const profitAbs = Math.abs(amount);
+              const isMtn = /MTN|MOBILE|MOMO/i.test(method);
+              const regularProfit = isMtn ? 0 : profitAbs;
+              const mtnProfit = isMtn ? profitAbs : 0;
+              const totalProfit = regularProfit + mtnProfit;
+
+              return (
+                <tr key={tx.id}>
+                  <td className="p-4 whitespace-nowrap">{timestamp}</td>
+                  <td className="p-4">{typeLabel}</td>
+                  <td className={`p-4 font-bold ${amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {amount.toFixed(2)} Birr
+                  </td>
+                  <td className="p-4">{running.toFixed(2)} Birr</td>
+                  <td className="p-4">{tx.note}</td>
+                  <td className="p-4 text-right text-green-200">{regularProfit ? regularProfit.toFixed(2) + ' Birr' : '—'}</td>
+                  <td className="p-4 text-right text-green-200">{mtnProfit ? mtnProfit.toFixed(2) + ' Birr' : '—'}</td>
+                  <td className="p-4 text-right font-semibold">{totalProfit ? totalProfit.toFixed(2) + ' Birr' : '—'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
