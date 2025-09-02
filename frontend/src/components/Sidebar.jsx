@@ -8,9 +8,13 @@ export default function Sidebar({
   user = {},
   gameHistory = [],
   onNav = () => {},
-  isExpanded = false,    // controlled by parent
-  onToggle = () => {}    // called to toggle expanded state
+  // keep these props for compatibility, but Sidebar will default to collapsed on load
+  isExpanded: controlledIsExpanded = undefined,
+  onToggle = () => {}
 }) {
+  // Sidebar now manages its own expanded state and always starts collapsed
+  const [expanded, setExpanded] = useState(false);
+
   // profile popup
   const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
@@ -30,7 +34,7 @@ export default function Sidebar({
     return n.toFixed(2) + ' Birr';
   };
 
-  // Close profile popup when clicking outside (does NOT auto-collapse sidebar)
+  // Close profile popup when clicking outside
   useEffect(() => {
     function onDocClick(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -119,23 +123,35 @@ export default function Sidebar({
     onNav('report');
   };
 
+  // Toggle expanded state (Sidebar-controlled). Notify parent via onToggle.
+  const toggleExpanded = (next) => {
+    const newVal = typeof next === 'boolean' ? next : !expanded;
+    setExpanded(newVal);
+    try { onToggle(); } catch (e) { /* noop if parent doesn't handle */ }
+  };
+
   // Profile button behavior:
   // - If collapsed -> expand sidebar and open popup
   // - If expanded  -> collapse sidebar (and close popup)
-  // Tap toggles sidebar; popup only shown when expanded
   const handleProfileTap = () => {
-    if (!isExpanded) {
+    if (!expanded) {
       // expand the sidebar
-      onToggle();
+      toggleExpanded(true);
       // open popup slightly after expansion finishes so it isn't cut off
-      // tune timeout to match your CSS transition (duration-300 by default)
       setTimeout(() => setProfileOpen(true), 260);
     } else {
-      // if expanded, close popup and collapse
+      // if expanded, close popup then collapse
       setProfileOpen(false);
-      onToggle();
+      toggleExpanded(false);
     }
   };
+
+  // If you still want to respect a parent's external control, uncomment and use this effect.
+  // Currently we intentionally ignore controlledIsExpanded on mount so the sidebar always starts collapsed.
+  // If you want parent to override at any time, you can sync here:
+  // useEffect(() => { if (typeof controlledIsExpanded === 'boolean') setExpanded(controlledIsExpanded); }, [controlledIsExpanded]);
+
+  const isExpanded = expanded;
 
   return (
     <div
@@ -174,7 +190,7 @@ export default function Sidebar({
                 >
                   Profile
                 </button>
-                {/* Log out removed from popup to avoid duplication; footer contains logout when expanded */}
+                {/* Log out removed from popup per your request; footer contains logout when expanded */}
               </div>
             </div>
           )}
