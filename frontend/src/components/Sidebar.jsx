@@ -11,11 +11,9 @@ export default function Sidebar({
   isExpanded = false,    // controlled by parent
   onToggle = () => {}    // called to toggle expanded state
 }) {
-  // profile popup
   const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // weekly profit state
   const [weekData, setWeekData] = useState([]);
   const [weekLoading, setWeekLoading] = useState(true);
   const [weekError, setWeekError] = useState(null);
@@ -30,7 +28,6 @@ export default function Sidebar({
     return n.toFixed(2) + ' Birr';
   };
 
-  // Close profile popup when clicking outside (does NOT auto-collapse sidebar)
   useEffect(() => {
     function onDocClick(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -41,7 +38,6 @@ export default function Sidebar({
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  // --- helpers for week range and formatting ---
   function toLocalISODate(d) {
     const tzOffset = d.getTimezoneOffset() * 60000;
     return new Date(d - tzOffset).toISOString().slice(0, 10);
@@ -49,8 +45,8 @@ export default function Sidebar({
 
   const computeWeekRange = () => {
     const today = new Date();
-    const day = today.getDay(); // 0 Sun .. 6 Sat
-    const diffToMon = (day + 6) % 7; // 0 if Monday
+    const day = today.getDay();
+    const diffToMon = (day + 6) % 7;
     const monday = new Date(today);
     monday.setDate(today.getDate() - diffToMon);
     monday.setHours(0,0,0,0);
@@ -63,7 +59,6 @@ export default function Sidebar({
     return days;
   };
 
-  // Fetch weekly profit for current calendar week (Mon→Sun)
   useEffect(() => {
     let cancelled = false;
     const days = computeWeekRange();
@@ -113,51 +108,36 @@ export default function Sidebar({
     window.location.reload();
   };
 
-  // Explicit open action only (prevents accidental navigation)
   const openProfitReport = (e) => {
     e?.preventDefault?.();
     onNav('report');
   };
 
-  // Profile button behavior:
-  // - If collapsed -> expand sidebar and open popup
-  // - If expanded  -> collapse sidebar (and close popup)
-  // Tap toggles sidebar; popup only shown when expanded
   const handleProfileTap = () => {
     if (!isExpanded) {
-      // expand the sidebar
       onToggle();
-      // open popup slightly after expansion finishes so it isn't cut off
-      // tune timeout to match your CSS transition (duration-300 by default)
+      // open popup after expand animation
       setTimeout(() => setProfileOpen(true), 260);
     } else {
-      // if expanded, close popup and collapse
       setProfileOpen(false);
       onToggle();
     }
   };
 
-  // When collapsed we want the entire sidebar visually hidden.
-  // Provide a small, always-on touch/click handle on the left edge that opens the sidebar when touched.
+  // Slim touch handle visible when collapsed.
   const TouchHandle = () => (
     <div
       className="fixed left-0 top-0 h-screen z-50 flex items-start"
       style={{ width: 20 }}
       aria-hidden="false"
     >
-      {/* Vertical clickable handle */}
       <button
-        onClick={() => {
-          onToggle();
-        }}
-        onTouchStart={() => {
-          onToggle();
-        }}
+        onClick={() => onToggle()}
+        onTouchStart={() => onToggle()}
         aria-label="Open sidebar"
         className="ml-1 mt-4 w-6 h-12 rounded-r-md bg-[#0b1220] border border-gray-700 flex items-center justify-center focus:outline-none"
         title="Open sidebar"
       >
-        {/* simple hamburger / touch cue */}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path d="M3 6h18" stroke="#9CA3AF" strokeWidth="1.6" strokeLinecap="round"/>
           <path d="M3 12h18" stroke="#9CA3AF" strokeWidth="1.6" strokeLinecap="round"/>
@@ -169,7 +149,7 @@ export default function Sidebar({
 
   return (
     <>
-      {/* If collapsed, only render the slim touch handle (sidebar remains visually hidden). */}
+      {/* Always show the slim touch handle when collapsed so agent can open explicitly */}
       {!isExpanded && <TouchHandle />}
 
       <div
@@ -178,10 +158,8 @@ export default function Sidebar({
         aria-expanded={isExpanded}
         aria-hidden={!isExpanded}
       >
-        {/* When expanded, render full sidebar content */}
         {isExpanded && (
           <>
-            {/* Top bar: profile button toggles sidebar + popup */}
             <div className="flex items-center justify-between p-3">
               <div className="relative" ref={menuRef}>
                 <button
@@ -217,7 +195,6 @@ export default function Sidebar({
                 )}
               </div>
 
-              {/* collapse button when expanded */}
               <div>
                 <button
                   onClick={() => { setProfileOpen(false); onToggle(); }}
@@ -253,7 +230,6 @@ export default function Sidebar({
                 </div>
               </div>
 
-              {/* Expanded weekly profit widget */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-lg font-semibold text-gray-400">Week Profit</h3>
@@ -280,7 +256,6 @@ export default function Sidebar({
                 </div>
               </div>
 
-              {/* Recent games */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-400 mb-3">Recent Games</h3>
                 <table className="w-full text-sm text-left">
@@ -318,7 +293,6 @@ export default function Sidebar({
               </div>
             </div>
 
-            {/* Footer area: only visible when expanded. Log out remains here. */}
             <div className="p-3">
               <button onClick={() => onNav('settings')} className="w-full py-2 mb-2 bg-gray-800 rounded-md hover:bg-gray-700">Settings</button>
               <button onClick={handleLogout} className="w-full py-2 bg-red-500 rounded-md hover:bg-red-600">Log Out</button>
