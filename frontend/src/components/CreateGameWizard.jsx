@@ -1,19 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+
+const STORAGE_KEYS = {
+  CALL_SPEED: 'yaba:lastCallSpeed',
+  SELECTED_CARDS: 'yaba:lastSelectedCards'
+};
+
+function loadNumber(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const n = JSON.parse(raw);
+    return typeof n === 'number' ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function loadArray(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export default function CreateGameWizard({ onCreated, sidebarExpanded = false }) {
   const [gameSpeed, setGameSpeed] = useState('Regular');
   const [betAmount, setBetAmount] = useState(10);
   const [audioLanguage, setAudioLanguage] = useState('Amharic Male');
-  const [callSpeed, setCallSpeed] = useState(10);
-  const [winningPattern, setWinningPattern] = useState('All Common Patterns');
-  const [selectedCards, setSelectedCards] = useState(new Set());
+
+  // Default call speed is 6 seconds; load persisted value if present
+  const [callSpeed, setCallSpeed] = useState(() => loadNumber(STORAGE_KEYS.CALL_SPEED, 6));
+
+  // selectedCards persisted across refreshes; stored as array of numbers in localStorage
+  const initialSelected = loadArray(STORAGE_KEYS.SELECTED_CARDS, []);
+  const [selectedCards, setSelectedCards] = useState(() => new Set(initialSelected));
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const getSpeedButtonClass = (speed) =>
     gameSpeed === speed ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300';
   const cardNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
+
+  // persist selected cards and call speed to localStorage so nothing changes after refresh
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SELECTED_CARDS, JSON.stringify(Array.from(selectedCards)));
+    } catch (e) {
+      console.warn('Unable to persist selected cards', e);
+    }
+  }, [selectedCards]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CALL_SPEED, JSON.stringify(Number(callSpeed)));
+    } catch (e) {
+      console.warn('Unable to persist call speed', e);
+    }
+  }, [callSpeed]);
 
   const toggleCardSelection = (cardNumber) => {
     setSelectedCards((prev) => {
@@ -38,7 +87,15 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
         game_type: gameSpeed,
         winning_pattern: winningPattern,
         active_cards: Array.from(selectedCards),
+        call_speed_seconds: Number(callSpeed)
       });
+      // save selection as "last used" (already saved via effect, but keep explicit)
+      try {
+        localStorage.setItem(STORAGE_KEYS.SELECTED_CARDS, JSON.stringify(Array.from(selectedCards)));
+        localStorage.setItem(STORAGE_KEYS.CALL_SPEED, JSON.stringify(Number(callSpeed)));
+      } catch (e) {
+        console.warn('Unable to persist after submit', e);
+      }
       onCreated(resp.data, { callSpeed: Number(callSpeed), audioLanguage });
     } catch (err) {
       setError(err.response?.data?.detail || 'An unknown error occurred.');
@@ -48,9 +105,10 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
   }
 
   // Keep layout in sync with sidebar:
-  // - when sidebarExpanded is true, on md+ screens leave space for the sidebar (md:ml-80)
-  // - always keep a small left margin for collapsed sidebar (ml-16)
   const marginClass = sidebarExpanded ? 'md:ml-80 ml-16' : 'md:ml-16 ml-16';
+
+  // winningPattern state moved here (was referenced in submit previously)
+  const [winningPattern, setWinningPattern] = useState('All Common Patterns');
 
   return (
     <div className={`${marginClass} transition-all duration-300`}>
@@ -123,10 +181,13 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
               <select
                 value={callSpeed}
                 onChange={(e) => setCallSpeed(Number(e.target.value))}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
+Name="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
               >
+                {/* keep previous options, add 3s and 4s, make 6s default */}
+                <option value={3}>3 seconds</option>
+                <option value={4}>4 seconds</option>
                 <option value={5}>5 seconds</option>
-                <option value={6}>6 seconds</option>
+                <option value={6}>6 seconds (default)</option>
                 <option value={7}>7 seconds</option>
                 <option value={10}>10 seconds</option>
                 <option value={15}>15 seconds</option>
