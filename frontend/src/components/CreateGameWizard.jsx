@@ -1,4 +1,3 @@
-```javascript
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
@@ -46,6 +45,7 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
 
   const getSpeedButtonClass = (speed) =>
     gameSpeed === speed ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300';
+
   const cardNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
 
   // persist selected cards and call speed to localStorage so nothing changes after refresh
@@ -113,8 +113,8 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
 
   return (
     <div className={`${marginClass} transition-all duration-300`}>
-      <div className="p-6 bg-[#0f172a] text-white min-h-screen">
-        <form onSubmit={handleSubmit} className="max-w-6xl mx-auto">
+      <div className="p-6 bg-[#0f172a] min-h-screen">
+        <form onSubmit={handleSubmit} className="max-w-6xl mx-auto text-white">
           <div className="flex flex-wrap gap-2 mb-6">
             <button
               type="button"
@@ -147,7 +147,7 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
                 value={betAmount}
                 min={1}
                 onChange={(e) => setBetAmount(Number(e.target.value))}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300"
                 placeholder="Enter amount"
               />
             </div>
@@ -209,12 +209,12 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
           <div className="bg-[#1e2b3a] p-4 rounded-lg">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <h3 className="text-lg font-bold">Select Active Cards</h3>
+                <h3 className="text-lg font-bold text-white">Select Active Cards</h3>
                 <p className="text-sm text-gray-400">{selectedCards.size} of 100 selected</p>
               </div>
               <div className="flex space-x-2">
-                <button type="button" onClick={selectAll} className="px-3 py-1 bg-blue-600 rounded-md text-sm">Select All</button>
-                <button type="button" onClick={deselectAll} className="px-3 py-1 bg-gray-600 rounded-md text-sm">Deselect All</button>
+                <button type="button" onClick={selectAll} className="px-3 py-1 bg-blue-600 rounded-md text-sm text-white">Select All</button>
+                <button type="button" onClick={deselectAll} className="px-3 py-1 bg-gray-600 rounded-md text-sm text-white">Deselect All</button>
               </div>
             </div>
 
@@ -248,4 +248,3 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
     </div>
   );
 }
-```
