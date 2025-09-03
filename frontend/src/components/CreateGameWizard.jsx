@@ -1,3 +1,4 @@
+```javascript
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
@@ -45,7 +46,6 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
 
   const getSpeedButtonClass = (speed) =>
     gameSpeed === speed ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300';
-
   const cardNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
 
   // persist selected cards and call speed to localStorage so nothing changes after refresh
@@ -157,7 +157,7 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
               <select
                 value={winningPattern}
                 onChange={(e) => setWinningPattern(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300"
               >
                 <option>All Common Patterns</option>
                 <option>Full House</option>
@@ -171,7 +171,7 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
               <select
                 value={audioLanguage}
                 onChange={(e) => setAudioLanguage(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300"
               >
                 <option>Amharic Male</option>
               </select>
@@ -180,13 +180,29 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Call Speed</label>
 
-              {/* Read-only display of the currently selected call speed (select removed) */}
+              {/* Selected indicator: gray background with white text for the value */}
               <div className="text-sm text-gray-300 mb-2">
-                Selected: <span className="font-medium text-gray-200">{callSpeed} seconds</span>
+                Selected:
+                <span className="ml-2 inline-block bg-gray-600 text-white font-medium px-2 py-1 rounded">
+                  {callSpeed} seconds
+                </span>
               </div>
 
-              {/* note: the interactive <select> was intentionally removed per request;
-                  callSpeed still persists and will be submitted with the form */}
+              {/* Keep the interactive select, but make the displayed value gray to match the page */}
+              <select
+                value={callSpeed}
+                onChange={(e) => setCallSpeed(Number(e.target.value))}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300"
+                aria-label="Call speed (seconds)"
+              >
+                <option value={3}>3 seconds</option>
+                <option value={4}>4 seconds</option>
+                <option value={5}>5 seconds</option>
+                <option value={6}>6 seconds (default)</option>
+                <option value={7}>7 seconds</option>
+                <option value={10}>10 seconds</option>
+                <option value={15}>15 seconds</option>
+              </select>
             </div>
           </div>
 
@@ -232,3 +248,4 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
     </div>
   );
 }
+```
