@@ -57,6 +57,17 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
     return calledNumbers.has(cellValue);
   };
 
+  // Handlers for Good/Bad buttons: play audio then close modal
+  const handleBad = () => {
+    playAudio('/audio/bad.mp3');
+    onClose();
+  };
+
+  const handleGood = () => {
+    playAudio('/audio/Good.mp3');
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-label="Card check result">
       <div className="bg-[#1f2937] p-6 rounded-lg shadow-2xl w-full max-w-2xl">
@@ -108,8 +119,20 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
           </table>
         </div>
 
-        <div className="mt-6 text-right">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium">Close</button>
+        <div className="mt-6 flex items-center justify-between">
+          <button
+            onClick={handleBad}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium"
+          >
+            Bad
+          </button>
+
+          <button
+            onClick={handleGood}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium"
+          >
+            Good
+          </button>
         </div>
       </div>
     </div>
@@ -149,7 +172,7 @@ const NumberGrid = ({ calledNumbers }) => {
                   return (
                     <td
                       key={num}
-                      className={`text-center font-semibold text-base py-2 rounded ${cellClass}`}
+                      className={`text-center font-semibold text-basecellClass}`}
                       aria-pressed={isCalled}
                     >
                       {num}
