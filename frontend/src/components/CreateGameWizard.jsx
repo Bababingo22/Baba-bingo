@@ -178,10 +178,14 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Call Speed</label>
+
+              {/* Visible indicator of the currently selected call speed (does not change existing behavior) */}
+              <div className="text-sm text-gray-300 mb-2">Selected: <span className="font-medium">{callSpeed} seconds</span></div>
+
               <select
                 value={callSpeed}
                 onChange={(e) => setCallSpeed(Number(e.target.value))}
-Name="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
+                Name="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
               >
                 {/* keep previous options, add 3s and 4s, make 6s default */}
                 <option value={3}>3 seconds</option>
