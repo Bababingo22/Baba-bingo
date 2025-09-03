@@ -1,3 +1,6 @@
+GitHub Copilot Chat Assistant
+
+```javascript
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
@@ -179,23 +182,13 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Call Speed</label>
 
-              {/* Visible indicator of the currently selected call speed (does not change existing behavior) */}
-              <div className="text-sm text-gray-300 mb-2">Selected: <span className="font-medium">{callSpeed} seconds</span></div>
+              {/* Read-only display of the currently selected call speed (select removed) */}
+              <div className="text-sm text-gray-300 mb-2">
+                Selected: <span className="font-medium text-gray-200">{callSpeed} seconds</span>
+              </div>
 
-              <select
-                value={callSpeed}
-                onChange={(e) => setCallSpeed(Number(e.target.value))}
-                Name="w-full p-2 bg-gray-700 border border-gray-600 rounded-md"
-              >
-                {/* keep previous options, add 3s and 4s, make 6s default */}
-                <option value={3}>3 seconds</option>
-                <option value={4}>4 seconds</option>
-                <option value={5}>5 seconds</option>
-                <option value={6}>6 seconds (default)</option>
-                <option value={7}>7 seconds</option>
-                <option value={10}>10 seconds</option>
-                <option value={15}>15 seconds</option>
-              </select>
+              {/* Note: the interactive <select> was intentionally removed per request.
+                  callSpeed is still persisted and submitted with the form. */}
             </div>
           </div>
 
@@ -241,3 +234,4 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
     </div>
   );
 }
+```
