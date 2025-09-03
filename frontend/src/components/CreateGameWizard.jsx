@@ -1,6 +1,3 @@
-GitHub Copilot Chat Assistant
-
-```javascript
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
@@ -48,6 +45,7 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
 
   const getSpeedButtonClass = (speed) =>
     gameSpeed === speed ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300';
+
   const cardNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
 
   // persist selected cards and call speed to localStorage so nothing changes after refresh
@@ -187,8 +185,8 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
                 Selected: <span className="font-medium text-gray-200">{callSpeed} seconds</span>
               </div>
 
-              {/* Note: the interactive <select> was intentionally removed per request.
-                  callSpeed is still persisted and submitted with the form. */}
+              {/* note: the interactive <select> was intentionally removed per request;
+                  callSpeed still persists and will be submitted with the form */}
             </div>
           </div>
 
@@ -234,4 +232,3 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
     </div>
   );
 }
-```
