@@ -268,7 +268,8 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
               >
                 {pages.map((pageNums, pageIdx) => (
                   <div key={pageIdx} className="flex-shrink-0 w-full">
-                    <div className="grid grid-cols-10 md:grid-cols-20 gap-2">
+                    {/* THIS IS THE LINE THAT WAS CHANGED */}
+                    <div className="flex flex-wrap gap-2">
                       {pageNums.map((num) => (
                         <button
                           type="button"
