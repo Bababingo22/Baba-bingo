@@ -267,9 +267,9 @@ export default function CreateGameWizard({ onCreated, sidebarExpanded = false })
                 }}
               >
                 {pages.map((pageNums, pageIdx) => (
-                  <div key={pageIdx} className="flex-shrink-0 w-full">
-                    {/* THIS IS THE LINE THAT WAS CHANGED */}
-                    <div className="flex flex-wrap gap-2">
+                  // THIS IS THE CORRECTED LINE:
+                  <div key={pageIdx} className="flex-shrink-0" style={{ width: `${100 / totalPages}%` }}>
+                    <div className="grid grid-cols-10 md:grid-cols-20 gap-2">
                       {pageNums.map((num) => (
                         <button
                           type="button"
