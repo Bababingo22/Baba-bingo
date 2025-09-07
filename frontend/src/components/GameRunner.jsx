@@ -64,7 +64,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
   };
 
   const handleGood = () => {
-    playAudio('/audio/Good.mp3');
+    playAudio('/audio/good.mp3');
     onClose();
   };
 
