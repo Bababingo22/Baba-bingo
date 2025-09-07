@@ -59,12 +59,12 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
 
   // Handlers for Good/Bad buttons: play audio then close modal
   const handleBad = () => {
-    playAudio('/audio/bad.mp3');
+    playAudio('/audio/male/bad.mp3');
     onClose();
   };
 
   const handleGood = () => {
-    playAudio('/audio/good.mp3');
+    playAudio('/audio/male/good.mp3');
     onClose();
   };
 
