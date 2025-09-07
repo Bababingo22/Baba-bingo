@@ -300,7 +300,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
             </div>
             <div className="flex gap-3">
               <div className="text-right">
-                <div className="text-xs text-gray-300">Prize Pool</div>
+                <div className="text-xs text-gray-300">ደራሽ</div>
                 <div className="text-lg font-semibold text-emerald-400">{prizeAmount} Birr</div>
               </div>
               <div className="bg-[#0f172a] px-3 py-2 rounded-md shadow-sm text-sm">
