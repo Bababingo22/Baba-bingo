@@ -1,4 +1,4 @@
-Yaba Bingo - Full stack project
+Vlad Bingo - Full stack project
 --------------------------------
 
 Backend: Django + Channels
@@ -15,7 +15,7 @@ Local setup (simplified):
 - python backend/manage.py migrate
 - python backend/manage.py createsuperuser
 - cd frontend && npm install && npm run dev
-- Run daphne for ASGI: daphne -b 0.0.0.0 -p 8000 yaba_bingo.asgi:application
+- Run daphne for ASGI: daphne -b 0.0.0.0 -p 8000 vlad_bingo.asgi:application
 
 Important features:
 - Super Admin uses Django Admin to manage Agents (User model has fields operational_credit and commission_percentage).
