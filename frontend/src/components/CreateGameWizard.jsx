@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
 const STORAGE_KEYS = {
-  CALL_SPEED: 'yaba:lastCallSpeed',
-  SELECTED_CARDS: 'yaba:lastSelectedCards'
+  CALL_SPEED: 'vlad:lastCallSpeed',
+  SELECTED_CARDS: 'vlad:lastSelectedCards'
 };
 
 function loadNumber(key, fallback) {
