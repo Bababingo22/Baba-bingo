@@ -9,7 +9,7 @@ import api, { setToken } from './services/api';
 // Helper function to safely get data from localStorage
 const getInitialGameState = () => {
   try {
-    const savedState = localStorage.getItem('yabaBingoGameState');
+    const savedState = localStorage.getItem('vladBingoGameState');
     return savedState ? JSON.parse(savedState) : { game: null, settings: { callSpeed: 10, audioLanguage: 'Amharic Male' } };
   } catch (e) {
     return { game: null, settings: { callSpeed: 10, audioLanguage: 'Amharic Male' } };
@@ -42,7 +42,7 @@ export default function App() {
         if (gameResponse) {
           const updatedGameState = { ...gameState, game: gameResponse.data };
           setGameState(updatedGameState);
-          localStorage.setItem('yabaBingoGameState', JSON.stringify(updatedGameState));
+          localStorage.setItem('vladBingoGameState', JSON.stringify(updatedGameState));
         }
         setAuthed(true);
       }).catch(() => {
@@ -73,7 +73,7 @@ export default function App() {
 
   function handleGameCreated(game, settings) {
     const newGameState = { game, settings };
-    localStorage.setItem('yabaBingoGameState', JSON.stringify(newGameState));
+    localStorage.setItem('vladBingoGameState', JSON.stringify(newGameState));
     setGameState(newGameState);
     setView('runner');
     refreshDashboardData();
@@ -81,7 +81,7 @@ export default function App() {
   
   const handleNav = (newView) => {
     if (newView !== 'runner') {
-      localStorage.removeItem('yabaBingoGameState');
+      localStorage.removeItem('vladBingoGameState');
       setGameState({ game: null, settings: { callSpeed: 10, audioLanguage: 'Amharic Male' } });
     }
     setView(newView);
