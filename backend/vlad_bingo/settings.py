@@ -14,7 +14,7 @@ ALLOWED_HOSTS = ["*"]
 # INJECTED FOR PRODUCTION: Add the Render.com URL to the list of trusted origins
 # This is required to allow the admin login form to be submitted securely.
 CSRF_TRUSTED_ORIGINS = [
-    'https://baba-bingo-backend.onrender.com'
+    'https://vlad-bingo-backend.onrender.com'
 ]
 
 # Application definition
@@ -49,7 +49,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "yaba_bingo.urls"
+ROOT_URLCONF = "vlad_bingo.urls"
 
 TEMPLATES = [
     {
@@ -63,8 +63,8 @@ TEMPLATES = [
     }
 ]
 
-WSGI_APPLICATION = "yaba_bingo.wsgi.application"
-ASGI_APPLICATION = "yaba_bingo.asgi.application"
+WSGI_APPLICATION = "vlad_bingo.wsgi.application"
+ASGI_APPLICATION = "vlad_bingo.asgi.application"
 
 # Database
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("RENDER_DATABASE_URL") or os.environ.get("RENDER_DATABASE_URL")
