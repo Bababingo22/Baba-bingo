@@ -23,7 +23,7 @@ export default function Login({ onLogin }) {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <form onSubmit={submit} className="bg-[#171717] p-8 rounded w-96">
-        <h1 className="text-2xl font-bold mb-4">ያባ ቢንጎ (Yaba Bingo)</h1>
+        <h1 className="text-2xl font-bold mb-4">Vlad Bingo</h1>
         {error && <div className="text-red-400 mb-2">{error}</div>}
         <label className="block mb-2 text-sm">Username</label>
         <input value={username} onChange={e=>setUsername(e.target.value)} className="w-full p-2 mb-3 bg-[#111] rounded" />
