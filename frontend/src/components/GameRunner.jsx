@@ -73,7 +73,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose }) => {
       <div className="bg-[#1f2937] p-6 rounded-lg shadow-2xl w-full max-w-2xl">
         <header className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-semibold text-white">Yaba Bingo</h2>
+            <h2 className="text-xl font-semibold text-white">Vlad Bingo</h2>
             <p className="text-sm text-gray-300">Card Number: <span className="font-medium">{card_number}</span></p>
           </div>
           <button onClick={onClose} aria-label="Close" className="text-gray-300 hover:text-white">✕</button>
