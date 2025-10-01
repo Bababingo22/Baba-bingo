@@ -6,7 +6,6 @@ import Sidebar from './components/Sidebar';
 import TransactionHistory from './components/TransactionHistory';
 import api, { setToken } from './services/api';
 
-// Helper function to safely get data from localStorage
 const getInitialGameState = () => {
   try {
     const savedState = localStorage.getItem('vladBingoGameState');
@@ -22,7 +21,8 @@ export default function App() {
   const [token, setTokenState] = useState(localStorage.getItem('token'));
   const [gameState, setGameState] = useState(getInitialGameState());
   const [view, setView] = useState(gameState.game ? 'runner' : 'create');
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  // THIS STATE IS IMPORTANT FOR THE LAYOUT
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false); // Default to collapsed
   const [gameHistory, setGameHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -106,6 +106,9 @@ export default function App() {
               onNav={handleNav}
            />;
   }
+  
+  // *** THIS IS THE NEW CODE THAT ADDS THE MARGIN ***
+  const marginClass = isSidebarExpanded ? 'ml-80' : 'ml-16';
 
   return (
     <div className="flex bg-[#0f172a] text-white min-h-screen">
@@ -116,7 +119,9 @@ export default function App() {
         isExpanded={isSidebarExpanded}
         onToggle={() => setIsSidebarExpanded(!isSidebarExpanded)}
       />
-      <main className="flex-1 overflow-y-auto">
+      {/* *** THE MARGIN CLASS IS ADDED HERE *** */}
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${marginClass}`}>
+        {/* The CreateGameWizard no longer needs the sidebar prop */}
         {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
         {view === 'report' && <TransactionHistory />}
       </main>
