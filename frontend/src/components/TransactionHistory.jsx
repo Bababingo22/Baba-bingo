@@ -34,23 +34,23 @@ export default function TransactionHistory() {
         <table className="min-w-full">
           <thead className="bg-gray-700">
             <tr>
-              <th className="p-4 text-left text-sm font-semibold uppercase">Date & Time</th>
+              {/* Columns have been reordered and renamed to match your drawing */}
+              <th className="p-4 text-left text-sm font-semibold uppercase">Remaining Total Amount</th>
+              <th className="p-4 text-left text-sm font-semibold uppercase">Bet Amount</th>
               <th className="p-4 text-left text-sm font-semibold uppercase">Type</th>
-              <th className="p-4 text-left text-sm font-semibold uppercase">Amount</th>
-              <th className="p-4 text-left text-sm font-semibold uppercase">Running Balance</th>
-              <th className="p-4 text-left text-sm font-semibold uppercase">Note</th>
+              <th className="p-4 text-left text-sm font-semibold uppercase">Date & Time</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {transactions.map(tx => (
               <tr key={tx.id}>
-                <td className="p-4 whitespace-nowrap">{new Date(tx.timestamp).toLocaleString()}</td>
-                <td className="p-4">{tx.type_display}</td>
+                {/* Data cells have been reordered to match the new headers */}
+                <td className="p-4">{Number(tx.running_balance).toFixed(2)} Birr</td>
                 <td className={`p-4 font-bold ${Number(tx.amount) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {Number(tx.amount).toFixed(2)} Birr
                 </td>
-                <td className="p-4">{Number(tx.running_balance).toFixed(2)} Birr</td>
-                <td className="p-4">{tx.note}</td>
+                <td className="p-4">{tx.type_display}</td>
+                <td className="p-4 whitespace-nowrap">{new Date(tx.timestamp).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
