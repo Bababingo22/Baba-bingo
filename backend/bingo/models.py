@@ -47,7 +47,6 @@ def generate_single_board():
         if col_idx == 2:
             nums[2] = "FREE"
         board.append(nums)
-    # Transpose columns to rows for the final board structure
     rows = [[board[col][row] for col in range(5)] for row in range(5)]
     return rows
 
