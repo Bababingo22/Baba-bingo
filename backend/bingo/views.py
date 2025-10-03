@@ -10,6 +10,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 def check_win_condition(board, called_numbers, pattern="Line"):
     called_set = set(called_numbers)
+    # Check for horizontal line wins
     for row_idx in range(5):
         is_winner = True
         for col_idx in range(5):
@@ -19,6 +20,7 @@ def check_win_condition(board, called_numbers, pattern="Line"):
                 is_winner = False
                 break
         if is_winner: return True
+    # If you want to add more win conditions (vertical, diagonal), you would add them here.
     return False
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -48,30 +50,44 @@ class CreateGameView(APIView):
         user = request.user
         if not user.is_agent:
             return Response({"detail": "Only agents can create games."}, status=status.HTTP_403_FORBIDDEN)
+        
         bet_amount_per_card = request.data.get("amount") 
         active_cards = request.data.get("active_cards", [])
+        
+        # Get the commission percentage from the request data, default to agent's setting
+        commission_percentage = request.data.get("commission_percentage", user.commission_percentage)
+
         if not active_cards or len(active_cards) < 3:
             return Response({"detail": "You must select at least 3 cards to start a game."}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             bet_amount_per_card = Decimal(bet_amount_per_card)
         except (TypeError, ValueError):
             return Response({"detail": "Invalid bet amount."}, status=status.HTTP_400_BAD_REQUEST)
+        
         number_of_cards = len(active_cards)
         launch_cost = bet_amount_per_card * number_of_cards
+        
         if user.operational_credit < launch_cost:
             return Response({"detail": f"Insufficient credit. Game Cost: {launch_cost}, Your Balance: {user.operational_credit}"}, status=status.HTTP_400_BAD_REQUEST)
+        
         user.operational_credit -= launch_cost
         user.save()
+        
         game_type = request.data.get("game_type", "Regular")
         Transaction.objects.create(
             agent=user, type="GAME_LAUNCH", amount=-launch_cost,
             running_balance=user.operational_credit, note=f"Game launch cost for {game_type} with {number_of_cards} cards"
         )
+        
         game = GameRound.objects.create(
             agent=user, game_type=game_type,
             winning_pattern=request.data.get("winning_pattern", "Line"),
-            amount=bet_amount_per_card, status="PENDING", active_card_numbers=active_cards
+            amount=bet_amount_per_card, status="PENDING", active_card_numbers=active_cards,
+            # Save the commission percentage chosen for this specific game
+            commission_percentage=commission_percentage
         )
+        
         serializer = GameRoundSerializer(game)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -107,9 +123,12 @@ class CheckWinView(APIView):
             card = PermanentCard.objects.get(card_number=card_number)
         except (GameRound.DoesNotExist, PermanentCard.DoesNotExist):
             return Response({"detail": "Game or Card not found."}, status=status.HTTP_404_NOT_FOUND)
+        
         if card.card_number not in game.active_card_numbers:
             return Response({"detail": "This card is not active in the current game."}, status=status.HTTP_400_BAD_REQUEST)
+        
         is_winner = check_win_condition(card.board, game.called_numbers, game.winning_pattern)
+        
         return Response({
             'is_winner': is_winner,
             'card_data': { 'card_number': card.card_number, 'board': card.board }
