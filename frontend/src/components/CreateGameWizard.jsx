@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
-// ... (keep the existing helper functions like STORAGE_KEYS, loadNumber, loadArray)
-
 const STORAGE_KEYS = {
   CALL_SPEED: 'vlad:lastCallSpeed',
   SELECTED_CARDS: 'vlad:lastSelectedCards'
@@ -30,7 +28,6 @@ function loadArray(key, fallback) {
   }
 }
 
-
 export default function CreateGameWizard({ onCreated }) {
   const [gameSpeed, setGameSpeed] = useState('Regular');
   const [betAmount, setBetAmount] = useState(10);
@@ -41,8 +38,6 @@ export default function CreateGameWizard({ onCreated }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [winningPattern, setWinningPattern] = useState('All Common Patterns');
-  
-  // *** NEW: Add state for commission percentage, default to 20% ***
   const [commissionPercentage, setCommissionPercentage] = useState(20);
 
   const getSpeedButtonClass = (speed) =>
@@ -87,10 +82,8 @@ export default function CreateGameWizard({ onCreated }) {
         winning_pattern: winningPattern,
         active_cards: Array.from(selectedCards),
         call_speed_seconds: Number(callSpeed),
-        // *** NEW: Send the commission percentage to the backend ***
         commission_percentage: Number(commissionPercentage)
       });
-      // ... (rest of the function is the same)
       try {
         localStorage.setItem(STORAGE_KEYS.SELECTED_CARDS, JSON.stringify(Array.from(selectedCards)));
         localStorage.setItem(STORAGE_KEYS.CALL_SPEED, JSON.stringify(Number(callSpeed)));
@@ -105,26 +98,24 @@ export default function CreateGameWizard({ onCreated }) {
     }
   }
 
-  // Helper to generate numbers for the commission dropdown
-  const commissionOptions = Array.from({ length: 16 }, (_, i) => 20 + i); // 20 to 35
+  const commissionOptions = Array.from({ length: 16 }, (_, i) => 20 + i);
 
   return (
     <div className="p-6 bg-[#0f172a] min-h-screen">
       <form onSubmit={handleSubmit} className="max-w-6xl mx-auto text-white">
-        {/* ... (The Speed Buttons are the same) ... */}
         <div className="flex flex-wrap gap-2 mb-6">
           <button type="button" onClick={() => setGameSpeed('Regular')} className={`px-4 py-2 rounded-md font-semibold ${getSpeedButtonClass('Regular')}`}>Regular Bingo</button>
           <button type="button" onClick={() => setGameSpeed('Fast')} className={`px-4 py-2 rounded-md font-semibold ${getSpeedButtonClass('Fast')}`}>Fast Bingo</button>
           <button type="button" onClick={() => setGameSpeed('Super Fast')} className={`px-4 py-2 rounded-md font-semibold ${getSpeedButtonClass('Super Fast')}`}>Super Fast Bingo</button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* The grid now contains all 5 options */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Bet Amount</label>
             <input type="number" value={betAmount} min={1} onChange={(e) => setBetAmount(Number(e.target.value))} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300" placeholder="Enter amount"/>
           </div>
 
-          {/* *** NEW: Commission Percentage Dropdown *** */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Commission</label>
             <select
@@ -147,6 +138,25 @@ export default function CreateGameWizard({ onCreated }) {
               <option>Both Diagonal Line</option>
             </select>
           </div>
+          
+          {/* *** THIS IS THE CALL SPEED SELECTOR THAT WAS MISSING *** */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Call Speed</label>
+            <select
+              value={callSpeed}
+              onChange={(e) => setCallSpeed(Number(e.target.value))}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300"
+              aria-label="Call speed (seconds)"
+            >
+              <option value={3}>3 seconds</option>
+              <option value={4}>4 seconds</option>
+              <option value={5}>5 seconds</option>
+              <option value={6}>6 seconds (default)</option>
+              <option value={7}>7 seconds</option>
+              <option value={10}>10 seconds</option>
+              <option value={15}>15 seconds</option>
+            </select>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Audio Language</label>
@@ -154,11 +164,9 @@ export default function CreateGameWizard({ onCreated }) {
               <option>Amharic Male</option>
             </select>
           </div>
-          
-          {/* ... (The rest of the form, including the Card Grid, remains the same) ... */}
+
         </div>
 
-        {/* ... (Card selection grid and submit button) ... */}
         <div className="bg-[#1e2b3a] p-4 rounded-lg">
           <div className="flex justify-between items-center mb-4">
             <div>
