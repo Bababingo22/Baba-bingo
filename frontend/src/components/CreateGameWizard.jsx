@@ -30,7 +30,8 @@ function loadArray(key, fallback) {
 
 export default function CreateGameWizard({ onCreated }) {
   const [gameSpeed, setGameSpeed] = useState('Regular');
-  const [betAmount, setBetAmount] = useState(10);
+  // *** START WITH AN EMPTY STRING OR A NUMBER, NOT JUST A NUMBER ***
+  const [betAmount, setBetAmount] = useState(10); 
   const [audioLanguage, setAudioLanguage] = useState('Amharic Male');
   const [callSpeed, setCallSpeed] = useState(() => loadNumber(STORAGE_KEYS.CALL_SPEED, 6));
   const initialSelected = loadArray(STORAGE_KEYS.SELECTED_CARDS, []);
@@ -109,11 +110,18 @@ export default function CreateGameWizard({ onCreated }) {
           <button type="button" onClick={() => setGameSpeed('Super Fast')} className={`px-4 py-2 rounded-md font-semibold ${getSpeedButtonClass('Super Fast')}`}>Super Fast Bingo</button>
         </div>
 
-        {/* The grid now contains all 5 options */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Bet Amount</label>
-            <input type="number" value={betAmount} min={1} onChange={(e) => setBetAmount(Number(e.target.value))} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300" placeholder="Enter amount"/>
+            <input 
+              type="number" 
+              value={betAmount} 
+              min={1} 
+              // *** THIS IS THE LINE THAT WAS FIXED ***
+              onChange={(e) => setBetAmount(e.target.value)} 
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300" 
+              placeholder="Enter amount"
+            />
           </div>
 
           <div>
@@ -139,7 +147,6 @@ export default function CreateGameWizard({ onCreated }) {
             </select>
           </div>
           
-          {/* *** THIS IS THE CALL SPEED SELECTOR THAT WAS MISSING *** */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Call Speed</label>
             <select
