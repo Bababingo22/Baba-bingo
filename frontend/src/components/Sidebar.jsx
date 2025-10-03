@@ -148,13 +148,12 @@ export default function Sidebar({
             {avatarInitial}
           </button>
           
-          {/* USERNAME AND PROFILE LINK HAVE BEEN REMOVED FROM HERE */}
           {profileOpen && isExpanded && (
             <div
               className="absolute left-0 mt-2 rounded-md bg-[#0f172a] border border-gray-700 shadow-lg text-sm py-2 w-44 z-50"
               role="menu"
             >
-              {/* The content that was here is now gone. You can add other menu items if you want. */}
+              {/* This is empty as per your previous request */}
             </div>
           )}
         </div>
@@ -180,11 +179,28 @@ export default function Sidebar({
       )}
 
       <div className={`flex-1 overflow-y-auto px-3 transition-opacity duration-200 ${isExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        {/* *** NAVIGATION BUTTON STYLES ARE NOW SIMPLIFIED *** */}
         <nav className="flex flex-col space-y-2 mb-6">
-          <button onClick={() => onNav('create')} className="p-3 text-left bg-gray-700 rounded-md font-semibold">Dashboard</button>
-          <button onClick={() => onNav('report')} className="p-3 text-left hover:bg-gray-700 rounded-md">Report</button>
-          <button onClick={() => alert('Online Games coming soon!')} className="p-3 text-left hover:bg-gray-700 rounded-md">Online Games</button>
+          <button 
+            onClick={() => onNav('create')} 
+            className="p-3 text-left rounded-md hover:bg-gray-700"
+          >
+            Dashboard
+          </button>
+          <button 
+            onClick={() => onNav('report')} 
+            className="p-3 text-left rounded-md hover:bg-gray-700"
+          >
+            Report
+          </button>
+          <button 
+            onClick={() => alert('Online Games coming soon!')} 
+            className="p-3 text-left rounded-md hover:bg-gray-700"
+          >
+            Online Games
+          </button>
         </nav>
+
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-400 mb-3">Statistics</h3>
           <div className="space-y-3">
