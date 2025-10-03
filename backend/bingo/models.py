@@ -1,28 +1,62 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
-from django.core.validators import MinValueValidator, MaxValueValidator # <-- Make sure this is imported
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 import random
 import json
 
-# ... (User, Transaction, generate_single_board, PermanentCard models are unchanged) ...
-
 class User(AbstractUser):
-    #...
-    pass
+    is_agent = models.BooleanField(default=False)
+    operational_credit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    commission_percentage = models.PositiveSmallIntegerField(
+        default=settings.MIN_COMMISSION_PERCENTAGE,
+        validators=[
+            MinValueValidator(settings.MIN_COMMISSION_PERCENTAGE),
+            MaxValueValidator(settings.MAX_COMMISSION_PERCENTAGE)
+        ]
+    )
+    def __str__(self):
+        return f"{self.username} ({'Agent' if self.is_agent else 'User'})"
 
 class Transaction(models.Model):
-    #...
-    pass
+    TRANSACTION_TYPES = [
+        ("MANUAL", "Manual Adjustment"),
+        ("GAME_LAUNCH", "Game Launch Cost"),
+        ("CREDIT", "Credit"),
+        ("DEBIT", "Debit"),
+    ]
+    agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="transactions")
+    timestamp = models.DateTimeField(default=timezone.now)
+    type = models.CharField(max_length=32, choices=TRANSACTION_TYPES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    running_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    note = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ["-timestamp"]
+        
+    def __str__(self):
+        return f"{self.agent.username} {self.type} {self.amount} at {self.timestamp}"
 
 def generate_single_board():
-    #...
-    pass
+    board = []
+    ranges = [(1,15), (16,30), (31,45), (46,60), (61,75)]
+    for col_idx, (a,b) in enumerate(ranges):
+        nums = random.sample(range(a, b+1), 5)
+        if col_idx == 2:
+            nums[2] = "FREE"
+        board.append(nums)
+    # Transpose columns to rows for the final board structure
+    rows = [[board[col][row] for col in range(5)] for row in range(5)]
+    return rows
 
 class PermanentCard(models.Model):
-    #...
-    pass
+    card_number = models.PositiveSmallIntegerField(unique=True)
+    board = models.JSONField()
+
+    def __str__(self):
+        return f"Permanent Card #{self.card_number}"
 
 class GameRound(models.Model):
     STATUS_CHOICES = [("PENDING", "Pending"), ("ACTIVE", "Active"), ("ENDED", "Ended")]
@@ -35,9 +69,10 @@ class GameRound(models.Model):
     game_type = models.CharField(max_length=32, default="Regular")
     winning_pattern = models.CharField(max_length=64, default="Line")
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
-    # *** NEW: Add the commission percentage field for this specific game ***
     commission_percentage = models.PositiveSmallIntegerField(
         default=20, 
         validators=[MinValueValidator(20), MaxValueValidator(35)]
     )
+
+    def __str__(self):
+        return f"Game #{self.id} by {self.agent.username}"
