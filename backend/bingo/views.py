@@ -10,17 +10,15 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 def check_win_condition(board, called_numbers, pattern="Line"):
     called_set = set(called_numbers)
-    # Check for horizontal line wins
     for row_idx in range(5):
         is_winner = True
         for col_idx in range(5):
             cell = board[col_idx][row_idx]
-            if cell == "FREE": continue
+            if cell == "FREE" or cell == "★": continue
             if cell not in called_set:
                 is_winner = False
                 break
         if is_winner: return True
-    # If you want to add more win conditions (vertical, diagonal), you would add them here.
     return False
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -53,8 +51,6 @@ class CreateGameView(APIView):
         
         bet_amount_per_card = request.data.get("amount") 
         active_cards = request.data.get("active_cards", [])
-        
-        # Get the commission percentage from the request data, default to agent's setting
         commission_percentage = request.data.get("commission_percentage", user.commission_percentage)
 
         if not active_cards or len(active_cards) < 3:
@@ -62,29 +58,37 @@ class CreateGameView(APIView):
         
         try:
             bet_amount_per_card = Decimal(bet_amount_per_card)
+            comm_pct = Decimal(commission_percentage)
         except (TypeError, ValueError):
-            return Response({"detail": "Invalid bet amount."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Invalid bet or commission amount."}, status=status.HTTP_400_BAD_REQUEST)
         
-        number_of_cards = len(active_cards)
-        launch_cost = bet_amount_per_card * number_of_cards
+        # --- FIXED CALCULATION LOGIC ---
+        # The agent collects the total bet amount from players
+        total_collected = bet_amount_per_card * len(active_cards)
         
-        if user.operational_credit < launch_cost:
-            return Response({"detail": f"Insufficient credit. Game Cost: {launch_cost}, Your Balance: {user.operational_credit}"}, status=status.HTTP_400_BAD_REQUEST)
+        # The system ONLY deducts the commission from the agent's balance
+        commission_cost = total_collected * (comm_pct / Decimal('100'))
         
-        user.operational_credit -= launch_cost
+        if user.operational_credit < commission_cost:
+            return Response({"detail": f"Insufficient credit. Commission Cost: {commission_cost}, Your Balance: {user.operational_credit}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Deduct ONLY the commission
+        user.operational_credit -= commission_cost
         user.save()
         
         game_type = request.data.get("game_type", "Regular")
+        
+        # Log the transaction clearly so the agent understands the charge
         Transaction.objects.create(
-            agent=user, type="GAME_LAUNCH", amount=-launch_cost,
-            running_balance=user.operational_credit, note=f"Game launch cost for {game_type} with {number_of_cards} cards"
+            agent=user, type="GAME_LAUNCH", amount=-commission_cost,
+            running_balance=user.operational_credit, 
+            note=f"{game_type} Commission ({len(active_cards)} cards at {bet_amount_per_card} ETB, {commission_percentage}%)"
         )
         
         game = GameRound.objects.create(
             agent=user, game_type=game_type,
             winning_pattern=request.data.get("winning_pattern", "Line"),
             amount=bet_amount_per_card, status="PENDING", active_card_numbers=active_cards,
-            # Save the commission percentage chosen for this specific game
             commission_percentage=commission_percentage
         )
         
