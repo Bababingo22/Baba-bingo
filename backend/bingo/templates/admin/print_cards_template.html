@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Printable Bingo Cards</title>
+    <style>
+        @media print {
+            @page {
+                size: A4;
+                margin: 0.5in;
+            }
+        }
+        body { font-family: Arial, sans-serif; }
+        .page-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2 cards per row */
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #777;
+            padding: 8px;
+            border-radius: 8px;
+            page-break-inside: avoid; /* Important for printing */
+        }
+        .card-header { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 8px; }
+        .card-footer { text-align: right; font-size: 12px; margin-top: 8px; color: #555; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            text-align: center;
+            font-weight: bold;
+            font-size: 20px;
+            height: 45px;
+            width: 20%;
+        }
+        th { color: white; border: 1px solid black; }
+        td { border: 1px solid #ccc; }
+        .b-col { background-color: #4A90E2; } /* Blue */
+        .i-col { background-color: #D0021B; } /* Red */
+        .n-col { background-color: #F8E71C; color: #333; } /* Yellow */
+        .g-col { background-color: #7ED321; } /* Green */
+        .o-col { background-color: #50E3C2; } /* Teal/Light Blue */
+        .free-space { font-size: 16px; color: #D0021B; }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="page-container">
+        {% for card in cards %}
+        <div class="card">
+            <div class="card-header">Vlad Bingo</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="b-col">B</th>
+                        <th class="i-col">I</th>
+                        <th class="n-col">N</th>
+                        <th class="g-col">G</th>
+                        <th class="o-col">O</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# CORRECTED LOOP: Loop through the numbers in the first column ('B') #}
+                    {# and use forloop.counter0 to get the index (0, 1, 2, 3, 4) #}
+                    {% for b_number in card.board.0 %}
+                    <tr>
+                        <td>{{ b_number }}</td>
+                        <td>{{ card.board.1|getItem:forloop.counter0 }}</td>
+                        <td {% if card.board.2|getItem:forloop.counter0 == "FREE" %}class="free-space"{% endif %}>
+                            {{ card.board.2|getItem:forloop.counter0 }}
+                        </td>
+                        <td>{{ card.board.3|getItem:forloop.counter0 }}</td>
+                        <td>{{ card.board.4|getItem:forloop.counter0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="card-footer">Card No. {{ card.card_number }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
