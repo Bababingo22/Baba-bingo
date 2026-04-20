@@ -101,7 +101,7 @@ export default function CreateGameWizard({ onCreated }) {
   const commissionOptions = Array.from({ length: 16 }, (_, i) => 20 + i);
 
   return (
-    <div className="p-4 bg-[#0f172a] min-h-screen">
+    <div className="p-4 bg-[#0f172a] min-h-screen font-sans">
       <form onSubmit={handleSubmit} className="max-w-[1400px] mx-auto text-white">
         <div className="flex flex-wrap gap-2 mb-4">
           <button type="button" onClick={() => setGameSpeed('Regular')} className={`px-4 py-1.5 rounded-md font-semibold text-sm ${getSpeedButtonClass('Regular')}`}>Regular Bingo</button>
@@ -170,30 +170,29 @@ export default function CreateGameWizard({ onCreated }) {
           </div>
         </div>
 
-        <div className="bg-[#1e2b3a] p-3 rounded-lg shadow-xl">
+        <div className="bg-[#1e2b3a] p-3 rounded-lg shadow-xl border border-gray-800">
           <div className="flex justify-between items-center mb-3">
             <div>
-              <h3 className="text-sm font-bold text-white">Select Active Cards</h3>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Select Active Cards</h3>
               <p className="text-[10px] text-gray-400 leading-none">{selectedCards.size} of {totalCards} selected</p>
             </div>
             <div className="flex space-x-2">
-              <button type="button" onClick={selectAll} className="px-2 py-1 bg-blue-600 rounded text-[10px] text-white hover:bg-blue-500 font-bold uppercase">Select All</button>
-              <button type="button" onClick={deselectAll} className="px-2 py-1 bg-gray-600 rounded text-[10px] text-white hover:bg-gray-500 font-bold uppercase">Deselect All</button>
+              <button type="button" onClick={selectAll} className="px-2 py-1 bg-blue-600 rounded text-[10px] text-white hover:bg-blue-500 font-bold uppercase tracking-wider shadow-sm">Select All</button>
+              <button type="button" onClick={deselectAll} className="px-2 py-1 bg-gray-600 rounded text-[10px] text-white hover:bg-gray-500 font-bold uppercase tracking-wider shadow-sm">Deselect All</button>
             </div>
           </div>
           
-          {/* ZERO GAP GRID: gap-0 removes spaces. Added subtle border lines for structure */}
+          {/* ZERO GAP GRID: Fits 40 columns perfectly on Desktop */}
           <div className="grid grid-cols-10 sm:grid-cols-20 md:grid-cols-25 lg:grid-cols-33 xl:grid-cols-40 gap-0 border-t border-l border-gray-900 rounded-sm overflow-hidden">
             {cardNumbers.map((num) => (
               <button 
                 type="button" 
                 key={num} 
                 onClick={() => toggleCardSelection(num)} 
-                // HEIGHT SET TO h-6 (Super tiny!). Text is BRIGHT WHITE and BLACK.
                 className={`w-full h-6 flex items-center justify-center border-b border-r border-gray-900 text-[11px] transition-colors ${
                   selectedCards.has(num) 
-                    ? 'bg-yellow-500 text-black font-black z-10 relative' 
-                    : 'bg-gray-800 text-white font-black hover:bg-gray-600'
+                    ? 'bg-yellow-500 text-black font-black z-10 relative shadow-[0_0_8px_rgba(250,204,21,0.5)]' 
+                    : 'bg-[#111827] text-white font-bold hover:bg-gray-600'
                 }`}
               >
                 {num}
@@ -207,7 +206,7 @@ export default function CreateGameWizard({ onCreated }) {
         <div className="mt-5 text-center">
           <button 
             type="submit" 
-            className="px-12 py-3 bg-yellow-500 text-black font-extrabold rounded-lg hover:bg-yellow-600 disabled:bg-gray-500 shadow-lg transform active:scale-95 transition-transform" 
+            className="px-12 py-3 bg-yellow-500 text-black font-extrabold rounded-lg hover:bg-yellow-600 disabled:bg-gray-500 shadow-[0_4px_14px_rgba(234,179,8,0.4)] transform active:scale-95 transition-transform" 
             disabled={isLoading}
           >
             {isLoading ? 'Creating...' : 'CREATE GAME'}
