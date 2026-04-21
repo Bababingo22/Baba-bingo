@@ -32,6 +32,23 @@ const parseBooleanLike = (v) => {
   return false;
 };
 
+// NEW: playAudio now accepts an optional callback when the audio finishes
+const playAudio = (src, onEndedCallback) => {
+  try {
+    const audio = new Audio(src);
+    if (onEndedCallback) {
+      audio.onended = onEndedCallback;
+    }
+    audio.play().catch((err) => {
+      console.warn("Audio blocked:", src);
+      if (onEndedCallback) onEndedCallback(); // Trigger callback anyway so game doesn't freeze
+    });
+  } catch (error) {
+    console.error(`Failed to play audio: ${src}`, error);
+    if (onEndedCallback) onEndedCallback();
+  }
+};
+
 const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) => {
   if (!checkResult || !checkResult.card_data) return null;
   
@@ -51,12 +68,10 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
     return !Number.isNaN(numeric) ? calledNumbers.has(numeric) : calledNumbers.has(cellValue);
   };
 
-  // --- SMART WIN PATTERN CHECKER ---
   const getWinningCells = () => {
     const winningSet = new Set();
     if (!isWinner) return winningSet;
 
-    // 1. Check Horizontal Rows
     for (let r = 0; r < 5; r++) {
       let isRowWin = true;
       for (let c = 0; c < 5; c++) {
@@ -67,7 +82,6 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
       }
     }
 
-    // 2. Check Vertical Columns
     for (let c = 0; c < 5; c++) {
       let isColWin = true;
       for (let r = 0; r < 5; r++) {
@@ -78,30 +92,20 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
       }
     }
 
-    // 3. Check Diagonals
     let diag1Win = true, diag2Win = true;
     for (let i = 0; i < 5; i++) {
       if (!isCellCalled(i, i, board[i][i])) diag1Win = false;
       if (!isCellCalled(i, 4 - i, board[i][4 - i])) diag2Win = false;
     }
-    if (diag1Win) {
-      for (let i = 0; i < 5; i++) winningSet.add(`${i}-${i}`);
-    }
-    if (diag2Win) {
-      for (let i = 0; i < 5; i++) winningSet.add(`${i}-${4 - i}`);
-    }
+    if (diag1Win) for (let i = 0; i < 5; i++) winningSet.add(`${i}-${i}`);
+    if (diag2Win) for (let i = 0; i < 5; i++) winningSet.add(`${i}-${4 - i}`);
 
-    // 4. Check 4 Corners
     if (
-      isCellCalled(0, 0, board[0][0]) &&
-      isCellCalled(4, 0, board[4][0]) &&
-      isCellCalled(0, 4, board[0][4]) &&
-      isCellCalled(4, 4, board[4][4])
+      isCellCalled(0, 0, board[0][0]) && isCellCalled(4, 0, board[4][0]) &&
+      isCellCalled(0, 4, board[0][4]) && isCellCalled(4, 4, board[4][4])
     ) {
-      winningSet.add("0-0");
-      winningSet.add("4-0");
-      winningSet.add("0-4");
-      winningSet.add("4-4");
+      winningSet.add("0-0"); winningSet.add("4-0");
+      winningSet.add("0-4"); winningSet.add("4-4");
     }
 
     return winningSet;
@@ -142,18 +146,16 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
                     const called = isCellCalled(colIndex, rowIndex, cellValue);
                     const isWinningCell = winningCells.has(`${colIndex}-${rowIndex}`);
                     
-                    let cellStyle = "bg-gray-800 text-gray-500 border border-gray-700"; // Default
+                    let cellStyle = "bg-gray-800 text-gray-500 border border-gray-700"; 
                     
                     if (called) {
                       if (isWinningCell) {
-                        // GREEN GLOW FOR WINNING LINES
                         cellStyle = 'bg-green-500 text-white font-black shadow-[0_0_25px_rgba(34,197,94,1)] scale-105 border-2 border-white z-10';
                       } else {
-                        // RED FOR USELESS CALLED NUMBERS
                         cellStyle = 'bg-red-600/90 text-white font-bold border border-red-400';
                       }
                     } else if (isFreeSpace) {
-                        cellStyle = 'bg-blue-600 text-white font-black'; // Free space style
+                        cellStyle = 'bg-blue-600 text-white font-black'; 
                     }
 
                     return (
@@ -209,18 +211,13 @@ const NumberGrid = ({ calledNumbers }) => {
   );
 };
 
-const playAudio = (src) => {
-  try {
-    const audio = new Audio(src);
-    audio.play().catch(() => {});
-  } catch (error) {
-    console.error(`Failed to play audio: ${src}`, error);
-  }
-};
-
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
   const [isPaused, setIsPaused] = useState(true);
+  
+  // NEW STATE: Tracks if audio is currently playing
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentNumber, setCurrentNumber] = useState(null);
@@ -229,10 +226,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
 
-  // THE AUDIO FIX: Route exactly to the right folder!
-  let voiceFolder = 'male';
-  if (audioLanguage === 'Amharic Male 2') voiceFolder = 'male2';
-  if (audioLanguage === 'Amharic Male 3') voiceFolder = 'male3';
+  const voiceFolder = audioLanguage === 'Amharic Male 2' ? 'male2' : 'male';
 
   const prizeAmount = (() => {
     if (!game || !game.active_card_numbers) return '0.00';
@@ -253,22 +247,36 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         const newNumber = data.number;
         setCalledNumbers(prev => { const next = new Set(prev); next.add(newNumber); return next; });
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
+        
         const formattedNum = newNumber < 10 ? `0${newNumber}` : newNumber;
-        playAudio(`/audio/${voiceFolder}/${getBingoLetter(newNumber)}${formattedNum}.mp3`);
+        
+        // Pause the countdown while the audio plays
+        setIsAudioPlaying(true);
         setCountdown(callSpeed);
+
+        playAudio(`/audio/${voiceFolder}/${getBingoLetter(newNumber)}${formattedNum}.mp3`, () => {
+          // Audio finished! Resume the countdown timer.
+          setIsAudioPlaying(false);
+        });
       }
     };
 
     socketRef.current.onopen = () => {
-      playAudio(`/audio/${voiceFolder}/game_start.mp3`);
-      setIsPaused(false);
+      // Pause game while intro audio plays
+      setIsAudioPlaying(true);
+      playAudio(`/audio/${voiceFolder}/game_start.mp3`, () => {
+        setIsAudioPlaying(false);
+        setIsPaused(false);
+      });
     };
 
     return () => { if (socketRef.current) socketRef.current.close(); };
   }, [game.id, token, callSpeed, voiceFolder]);
 
+  // The Timer Logic: Will NOT tick down if audio is playing
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || isAudioPlaying) return;
+    
     const timerId = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -280,8 +288,9 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         return prev - 1;
       });
     }, 1000);
+    
     return () => clearInterval(timerId);
-  }, [isPaused, callSpeed]);
+  }, [isPaused, isAudioPlaying, callSpeed]);
 
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
@@ -348,7 +357,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 <div className="flex-0 md:w-48 w-full">
                   <div className="text-[10px] text-gray-500 font-black uppercase mb-2">Next Ball In</div>
                   <div className="bg-gray-900 border-2 border-gray-800 text-green-500 rounded-2xl py-8 text-center text-7xl font-black shadow-inner">
-                    <span>{isPaused ? '--' : countdown}</span>
+                    {/* Visual indicator that audio is playing! */}
+                    <span>{isPaused ? '--' : isAudioPlaying ? '🔊' : countdown}</span>
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col gap-4 w-full">
