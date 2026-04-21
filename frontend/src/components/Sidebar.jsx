@@ -27,6 +27,19 @@ export default function Sidebar({
     return n.toFixed(2) + ' Birr';
   };
 
+  // --- CALCULATE TODAY'S PROFIT ---
+  const todayStr = new Date().toLocaleDateString();
+  const todaysProfit = Array.isArray(gameHistory) ? gameHistory.reduce((sum, game) => {
+    if (!game.created_at) return sum;
+    if (new Date(game.created_at).toLocaleDateString() === todayStr) {
+      const players = game.players_count ?? (game.active_card_numbers?.length || 0);
+      const totalBet = game.total_bet_amount ?? (game.amount * players);
+      const commPct = game.commission_percentage || 0;
+      return sum + (totalBet * (commPct / 100));
+    }
+    return sum;
+  }, 0) : 0;
+
   useEffect(() => {
     function onDocClick(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -147,15 +160,6 @@ export default function Sidebar({
           >
             {avatarInitial}
           </button>
-          
-          {profileOpen && isExpanded && (
-            <div
-              className="absolute left-0 mt-2 rounded-md bg-[#0f172a] border border-gray-700 shadow-lg text-sm py-2 w-44 z-50"
-              role="menu"
-            >
-              {/* This is empty as per your previous request */}
-            </div>
-          )}
         </div>
         <div style={{ width: 40 }} />
       </div>
@@ -179,45 +183,40 @@ export default function Sidebar({
       )}
 
       <div className={`flex-1 overflow-y-auto px-3 transition-opacity duration-200 ${isExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        {/* *** NAVIGATION BUTTON STYLES ARE NOW SIMPLIFIED *** */}
         <nav className="flex flex-col space-y-2 mb-6">
-          <button 
-            onClick={() => onNav('create')} 
-            className="p-3 text-left rounded-md hover:bg-gray-700"
-          >
+          <button onClick={() => onNav('create')} className="p-3 text-left rounded-md hover:bg-gray-700 font-semibold">
             Dashboard
           </button>
-          <button 
-            onClick={() => onNav('report')} 
-            className="p-3 text-left rounded-md hover:bg-gray-700"
-          >
+          <button onClick={() => onNav('report')} className="p-3 text-left rounded-md hover:bg-gray-700 font-semibold">
             Report
-          </button>
-          <button 
-            onClick={() => alert('Online Games coming soon!')} 
-            className="p-3 text-left rounded-md hover:bg-gray-700"
-          >
-            Online Games
           </button>
         </nav>
 
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-400 mb-3">Statistics</h3>
+          <h3 className="text-lg font-bold text-gray-400 mb-3 tracking-wide uppercase">Statistics</h3>
           <div className="space-y-3">
-            <div className="bg-gray-900 p-3 rounded-lg">
-              <div className="text-gray-500">Total Games</div>
-              <div className="text-2xl font-bold">{totalGames}</div>
+            <div className="bg-gray-900 p-3 rounded-lg border border-gray-800">
+              <div className="text-xs text-gray-500 uppercase font-bold">Total Games</div>
+              <div className="text-2xl font-black">{totalGames}</div>
             </div>
-            <div className="bg-gray-900 p-3 rounded-lg">
-              <div className="text-gray-500">Wallet</div>
-              <div className="text-2xl font-bold">{formatCurrency(user.operational_credit)}</div>
+            
+            {/* NEW: TODAY'S PROFIT CARD */}
+            <div className="bg-gray-900 p-3 rounded-lg border border-green-900/50 shadow-[0_0_10px_rgba(34,197,94,0.1)]">
+              <div className="text-xs text-green-500 uppercase font-bold">Today's Profit</div>
+              <div className="text-2xl font-black text-green-400">{formatCurrency(todaysProfit)}</div>
+            </div>
+
+            <div className="bg-gray-900 p-3 rounded-lg border border-gray-800">
+              <div className="text-xs text-gray-500 uppercase font-bold">Wallet</div>
+              <div className="text-2xl font-black text-blue-400">{formatCurrency(user.operational_credit)}</div>
             </div>
           </div>
         </div>
+
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-semibold text-gray-400">Week Profit</h3>
-            <button onClick={openProfitReport} className="text-sm text-blue-400 hover:underline">Open Report</button>
+            <h3 className="text-lg font-bold text-gray-400 uppercase tracking-wide">Week Profit</h3>
+            <button onClick={openProfitReport} className="text-xs font-bold text-blue-400 hover:underline uppercase">Open Report</button>
           </div>
           <div className="bg-[#121827] border border-gray-700 rounded-md overflow-hidden">
             <div className="divide-y divide-gray-800">
@@ -226,57 +225,59 @@ export default function Sidebar({
               {!weekLoading && !weekError && weekData.map((d) => (
                 <div key={d.date} className="flex items-center justify-between px-3 py-2">
                   <div className="flex flex-col">
-                    <div className="text-sm font-medium text-gray-200">{d.weekdayFull}</div>
-                    <div className="text-xs text-gray-400">{d.date}</div>
+                    <div className="text-sm font-bold text-gray-200">{d.weekdayFull}</div>
+                    <div className="text-xs text-gray-500">{d.date}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-yellow-400">{d.total_profit !== null ? formatCurrency(d.total_profit) : '—'}</div>
-                    <div className="text-xs text-gray-400">{d.regular_profit !== null ? formatCurrency(d.regular_profit) : '—'} / {d.mtn_profit !== null ? formatCurrency(d.mtn_profit) : '—'}</div>
+                    <div className="text-sm font-black text-yellow-400">{d.total_profit !== null ? formatCurrency(d.total_profit) : '—'}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-400 mb-3">Recent Games</h3>
-          <table className="w-full text-sm text-left">
-            <thead className="text-gray-400">
-              <tr>
-                <th className="p-2">Date</th>
-                <th className="p-2">Players</th>
-                <th className="p-2">Total Bet</th>
-                <th className="p-2">Profit</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {Array.isArray(gameHistory) && gameHistory.slice(0, 5).map(game => {
-                const date = game.created_at ? new Date(game.created_at).toLocaleDateString() : '—';
-                const players = (game.players_count !== undefined && game.players_count !== null) ? game.players_count : (Array.isArray(game.active_card_numbers) ? game.active_card_numbers.length : '—');
-                const totalBet = game.total_bet_amount ?? (game.amount && players ? (Number(game.amount) * Number(players)).toFixed(2) : null);
-                const profit = game.profit ?? null;
 
-                return (
-                  <tr key={game.id}>
-                    <td className="p-2">{date}</td>
-                    <td className="p-2">{players}</td>
-                    <td className="p-2">{totalBet !== null ? `${Number(totalBet).toFixed(2)} Birr` : '—'}</td>
-                    <td className="p-2">{profit !== null ? `${Number(profit).toFixed(2)} Birr` : '—'}</td>
-                  </tr>
-                );
-              })}
-              {(!Array.isArray(gameHistory) || gameHistory.length === 0) && (
+        <div className="mb-8">
+          <h3 className="text-lg font-bold text-gray-400 mb-3 tracking-wide uppercase">Recent Games</h3>
+          <div className="bg-[#121827] border border-gray-700 rounded-md overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-800 text-gray-400 text-xs uppercase">
                 <tr>
-                  <td className="p-2" colSpan="4">No recent games</td>
+                  <th className="p-2 font-bold">Date</th>
+                  <th className="p-2 font-bold text-center">Cards</th>
+                  <th className="p-2 font-bold text-right">Profit</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {Array.isArray(gameHistory) && gameHistory.slice(0, 8).map(game => {
+                  const date = game.created_at ? new Date(game.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—';
+                  const players = (game.players_count !== undefined && game.players_count !== null) ? game.players_count : (Array.isArray(game.active_card_numbers) ? game.active_card_numbers.length : 0);
+                  const totalBet = game.total_bet_amount ?? (game.amount && players ? (Number(game.amount) * Number(players)) : 0);
+                  
+                  // FIXED PROFIT CALCULATION FOR TABLE
+                  const commPct = game.commission_percentage || 0;
+                  const profit = game.profit ?? (totalBet * (commPct / 100));
+
+                  return (
+                    <tr key={game.id} className="hover:bg-gray-800/50 transition-colors">
+                      <td className="p-2 font-medium text-gray-300">{date}</td>
+                      <td className="p-2 text-center text-gray-400">{players}</td>
+                      <td className="p-2 text-right font-bold text-green-400">{profit !== null ? `${Number(profit).toFixed(2)}` : '—'}</td>
+                    </tr>
+                  );
+                })}
+                {(!Array.isArray(gameHistory) || gameHistory.length === 0) && (
+                  <tr>
+                    <td className="p-4 text-center text-gray-500 italic" colSpan="3">No games played yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-      <div className={`p-3 ${isExpanded ? 'block' : 'hidden'}`}>
-        <button onClick={() => onNav('settings')} className="w-full py-2 mb-2 bg-gray-800 rounded-md hover:bg-gray-700">Settings</button>
-        <button onClick={handleLogout} className="w-full py-2 bg-red-500 rounded-md hover:bg-red-600">Log Out</button>
+      <div className={`p-3 border-t border-gray-800 bg-[#0f172a] ${isExpanded ? 'block' : 'hidden'}`}>
+        <button onClick={handleLogout} className="w-full py-3 bg-red-600 text-white font-bold rounded-md hover:bg-red-700 transition-colors">Log Out</button>
       </div>
     </div>
   );
