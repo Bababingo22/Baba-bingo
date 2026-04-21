@@ -153,7 +153,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
                         cellStyle = 'bg-red-600/90 text-white font-bold border border-red-400';
                       }
                     } else if (isFreeSpace) {
-                        cellStyle = 'bg-blue-600 text-white font-black'; // Just in case it isn't marked as called
+                        cellStyle = 'bg-blue-600 text-white font-black'; // Free space style
                     }
 
                     return (
@@ -229,7 +229,10 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
 
-  const voiceFolder = 'male';
+  // THE AUDIO FIX: Route exactly to the right folder!
+  let voiceFolder = 'male';
+  if (audioLanguage === 'Amharic Male 2') voiceFolder = 'male2';
+  if (audioLanguage === 'Amharic Male 3') voiceFolder = 'male3';
 
   const prizeAmount = (() => {
     if (!game || !game.active_card_numbers) return '0.00';
