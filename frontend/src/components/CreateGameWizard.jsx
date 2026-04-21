@@ -166,6 +166,8 @@ export default function CreateGameWizard({ onCreated }) {
             <label className="block text-xs font-medium text-gray-400 mb-1">Audio Language</label>
             <select value={audioLanguage} onChange={(e) => setAudioLanguage(e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300 text-sm">
               <option>Amharic Male</option>
+              <option>Amharic Male 2</option>
+              <option>Amharic Male 3</option>
             </select>
           </div>
         </div>
