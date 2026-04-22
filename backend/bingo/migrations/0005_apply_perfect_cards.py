@@ -218,5 +218,5 @@ class Migration(migrations.Migration):
         ('bingo', '0003_gameround_commission_percentage'),
     ]
     operations = [
-        migrations.RunPython(seed_perfect_cards),
+        migrations.RunPython(apply_perfect_cards),
     ]
