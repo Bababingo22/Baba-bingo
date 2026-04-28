@@ -14,7 +14,7 @@ export default function RegisterCardsPage({ game, onStartGame }) {
     setLoading(true);
     try {
       const res = await api.post(`/games/${activeGame.id}/add_card/`, { card_number: newCard });
-      setActiveGame(res.data); // Updates the card count and prize!
+      setActiveGame(res.data); // Updates the card count, prize, and the list!
       setNewCard('');
     } catch (err) {
       alert(err.response?.data?.detail || "Failed to add card");
@@ -23,20 +23,26 @@ export default function RegisterCardsPage({ game, onStartGame }) {
     }
   };
 
+  // Sort the cards so they appear in numerical order
+  const sortedCards = [...(activeGame.active_card_numbers || [])].sort((a, b) => a - b);
+
   return (
     <div className="bg-[#081226] min-h-screen flex flex-col items-center justify-center p-6 text-white font-sans">
-      <div className="bg-[#111827] p-8 rounded-2xl border border-gray-800 w-full max-w-md shadow-2xl text-center">
-        <h2 className="text-3xl font-black text-yellow-500 mb-2">GAME #{activeGame.id}</h2>
-        <p className="text-gray-400 mb-8 font-bold tracking-widest uppercase">Registration Phase</p>
+      <div className="bg-[#111827] p-8 rounded-2xl border border-gray-800 w-full max-w-2xl shadow-2xl">
+        
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-black text-yellow-500 mb-2">GAME #{activeGame.id}</h2>
+          <p className="text-gray-400 font-bold tracking-widest uppercase">Registration Phase</p>
+        </div>
 
-        <div className="flex justify-between items-center bg-gray-900 p-4 rounded-xl mb-8 border border-gray-800">
-          <div className="text-left">
-            <div className="text-xs text-gray-500 font-bold uppercase">Registered Cards</div>
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-gray-900 p-4 rounded-xl border border-gray-800 text-center">
+            <div className="text-xs text-gray-500 font-bold uppercase mb-1">Registered Cards</div>
             <div className="text-4xl font-black">{activeGame.active_card_numbers?.length || 0}</div>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-gray-500 font-bold uppercase">Total Prize</div>
-            <div className="text-3xl font-black text-green-500">{prizeAmount} ETB</div>
+          <div className="bg-gray-900 p-4 rounded-xl border border-gray-800 text-center">
+            <div className="text-xs text-gray-500 font-bold uppercase mb-1">Total Prize</div>
+            <div className="text-3xl font-black text-green-500 mt-1">{prizeAmount} ETB</div>
           </div>
         </div>
 
@@ -46,14 +52,32 @@ export default function RegisterCardsPage({ game, onStartGame }) {
             value={newCard} 
             onChange={(e) => setNewCard(e.target.value)} 
             placeholder="Enter Card #" 
-            className="flex-1 bg-gray-950 border-2 border-gray-700 p-4 rounded-xl text-xl font-bold text-white focus:border-yellow-500 outline-none"
+            className="flex-1 bg-gray-950 border-2 border-gray-700 p-4 rounded-xl text-xl font-bold text-white focus:border-yellow-500 outline-none transition-colors"
           />
-          <button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 px-6 font-black rounded-xl text-lg transition-transform active:scale-95 disabled:opacity-50">
+          <button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 px-8 font-black rounded-xl text-xl transition-transform active:scale-95 disabled:opacity-50 shadow-lg">
             + ADD
           </button>
         </form>
 
-        <button onClick={() => onStartGame(activeGame)} className="w-full bg-green-600 hover:bg-green-700 py-5 rounded-xl font-black text-2xl tracking-widest uppercase shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-transform active:scale-95">
+        {/* NEW: The Registered Cards List */}
+        <div className="mb-8">
+          <h3 className="text-xs text-gray-500 font-bold uppercase mb-3 tracking-widest">Active Card List</h3>
+          <div className="bg-gray-950 border border-gray-800 rounded-xl p-4 max-h-48 overflow-y-auto">
+            {sortedCards.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {sortedCards.map(num => (
+                  <div key={num} className="bg-gray-800 text-yellow-500 font-black px-3 py-1.5 rounded-md border border-gray-700 text-sm">
+                    #{num}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-600 font-bold py-4 italic">No cards registered yet.</div>
+            )}
+          </div>
+        </div>
+
+        <button onClick={() => onStartGame(activeGame)} className="w-full bg-green-600 hover:bg-green-500 py-5 rounded-xl font-black text-2xl tracking-widest uppercase shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all active:scale-95 border-b-4 border-green-800 active:border-b-0 active:translate-y-1">
           START CALLING ▶
         </button>
       </div>
