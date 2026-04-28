@@ -23,16 +23,18 @@ const getLetterColorClass = (letter) => {
 
 const parseBooleanLike = (v) => {
   if (v === undefined || v === null) return false;
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v === 1;
-  if (typeof v === 'string') {
-    const s = v.trim().toLowerCase();
-    return s === 'true' || s === '1' || s === 'yes' || s === 'win' || s === 'won' || s === 'winner';
-  }
+  if (v === true) return true;
+  if (v === 1) return true;
+  const s = String(v).trim().toLowerCase();
+  if (s === 'true') return true;
+  if (s === '1') return true;
+  if (s === 'yes') return true;
+  if (s === 'win') return true;
+  if (s === 'won') return true;
+  if (s === 'winner') return true;
   return false;
 };
 
-// NEW: playAudio now accepts an optional callback when the audio finishes
 const playAudio = (src, onEndedCallback) => {
   try {
     const audio = new Audio(src);
@@ -41,10 +43,10 @@ const playAudio = (src, onEndedCallback) => {
     }
     audio.play().catch((err) => {
       console.warn("Audio blocked:", src);
-      if (onEndedCallback) onEndedCallback(); // Trigger callback anyway so game doesn't freeze
+      if (onEndedCallback) onEndedCallback(); 
     });
   } catch (error) {
-    console.error(`Failed to play audio: ${src}`, error);
+    console.error("Failed to play audio: " + src, error);
     if (onEndedCallback) onEndedCallback();
   }
 };
@@ -52,10 +54,7 @@ const playAudio = (src, onEndedCallback) => {
 const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) => {
   if (!checkResult || !checkResult.card_data) return null;
   
-  const isWinner = parseBooleanLike(checkResult.is_winner) || 
-                   parseBooleanLike(checkResult.winner) || 
-                   (typeof checkResult.result === 'string' && checkResult.result.toLowerCase().includes('win'));
-
+  const isWinner = parseBooleanLike(checkResult.is_winner);
   const { card_data } = checkResult;
   const { card_number, board } = card_data;
   const headers = ['B', 'I', 'N', 'G', 'O'];
@@ -78,7 +77,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
         if (!isCellCalled(c, r, board[c][r])) isRowWin = false;
       }
       if (isRowWin) {
-        for (let c = 0; c < 5; c++) winningSet.add(`${c}-${r}`);
+        for (let c = 0; c < 5; c++) winningSet.add(c.toString() + "-" + r.toString());
       }
     }
 
@@ -88,7 +87,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
         if (!isCellCalled(c, r, board[c][r])) isColWin = false;
       }
       if (isColWin) {
-        for (let r = 0; r < 5; r++) winningSet.add(`${c}-${r}`);
+        for (let r = 0; r < 5; r++) winningSet.add(c.toString() + "-" + r.toString());
       }
     }
 
@@ -97,8 +96,8 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
       if (!isCellCalled(i, i, board[i][i])) diag1Win = false;
       if (!isCellCalled(i, 4 - i, board[i][4 - i])) diag2Win = false;
     }
-    if (diag1Win) for (let i = 0; i < 5; i++) winningSet.add(`${i}-${i}`);
-    if (diag2Win) for (let i = 0; i < 5; i++) winningSet.add(`${i}-${4 - i}`);
+    if (diag1Win) for (let i = 0; i < 5; i++) winningSet.add(i.toString() + "-" + i.toString());
+    if (diag2Win) for (let i = 0; i < 5; i++) winningSet.add(i.toString() + "-" + (4 - i).toString());
 
     if (
       isCellCalled(0, 0, board[0][0]) && isCellCalled(4, 0, board[4][0]) &&
@@ -113,8 +112,8 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
 
   const winningCells = getWinningCells();
 
-  const handleBad = () => { playAudio(`/audio/${voiceFolder}/bad.mp3`); onClose(); };
-  const handleGood = () => { playAudio(`/audio/${voiceFolder}/good.mp3`); onClose(); };
+  const handleBad = () => { playAudio("/audio/" + voiceFolder + "/bad.mp3"); onClose(); };
+  const handleGood = () => { playAudio("/audio/" + voiceFolder + "/good.mp3"); onClose(); };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -127,7 +126,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
           <button onClick={onClose} className="text-gray-500 hover:text-white text-3xl transition-colors">✕</button>
         </header>
 
-        <div className={`p-4 rounded-lg mb-6 border-2 ${isWinner ? 'bg-green-900/40 border-green-500 text-green-400 animate-pulse' : 'bg-red-900/40 border-red-500 text-red-400'}`}>
+        <div className={"p-4 rounded-lg mb-6 border-2 " + (isWinner ? 'bg-green-900/40 border-green-500 text-green-400 animate-pulse' : 'bg-red-900/40 border-red-500 text-red-400')}>
           <h3 className="text-center text-3xl font-black italic uppercase tracking-widest">
             {isWinner ? 'WINNER! — ዘግቷል' : 'NO WIN — አልዘጋም'}
           </h3>
@@ -136,7 +135,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
         <div className="overflow-hidden rounded-lg border border-gray-800 bg-[#030712] shadow-inner">
           <table className="w-full border-separate" style={{ borderSpacing: '4px' }}>
             <thead>
-              <tr>{headers.map((h, i) => (<th key={h} className={`w-1/5 text-center text-xl font-black p-2 text-white rounded-t-md ${colors[i]}`}>{h}</th>))}</tr>
+              <tr>{headers.map((h, i) => (<th key={h} className={"w-1/5 text-center text-xl font-black p-2 text-white rounded-t-md " + colors[i]}>{h}</th>))}</tr>
             </thead>
             <tbody className="bg-gray-900/50">
               {rows.map((row, rowIndex) => (
@@ -144,22 +143,22 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
                   {row.map((cellValue, colIndex) => {
                     const isFreeSpace = cellValue === "FREE" || cellValue === "★";
                     const called = isCellCalled(colIndex, rowIndex, cellValue);
-                    const isWinningCell = winningCells.has(`${colIndex}-${rowIndex}`);
+                    const isWinningCell = winningCells.has(colIndex.toString() + "-" + rowIndex.toString());
                     
                     let cellStyle = "bg-gray-800 text-gray-500 border border-gray-700"; 
                     
                     if (called) {
                       if (isWinningCell) {
-                        cellStyle = 'bg-green-500 text-white font-black shadow-[0_0_25px_rgba(34,197,94,1)] scale-105 border-2 border-white z-10';
+                        cellStyle = "bg-green-500 text-white font-black shadow-[0_0_25px_rgba(34,197,94,1)] scale-105 border-2 border-white z-10";
                       } else {
-                        cellStyle = 'bg-red-600/90 text-white font-bold border border-red-400';
+                        cellStyle = "bg-red-600/90 text-white font-bold border border-red-400";
                       }
                     } else if (isFreeSpace) {
-                        cellStyle = 'bg-blue-600 text-white font-black'; 
+                        cellStyle = "bg-blue-600 text-white font-black"; 
                     }
 
                     return (
-                      <td key={`${colIndex}-${rowIndex}`} className={`text-center text-2xl h-16 rounded-md transition-all duration-300 ${cellStyle}`}>
+                      <td key={colIndex.toString() + "-" + rowIndex.toString()} className={"text-center text-2xl h-16 rounded-md transition-all duration-300 " + cellStyle}>
                         {isFreeSpace ? '★' : cellValue}
                       </td>
                     );
@@ -182,6 +181,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
 const NumberGrid = ({ calledNumbers }) => {
   const headers = ['B', 'I', 'N', 'G', 'O'];
   const headerColors = ['bg-blue-600', 'bg-green-600', 'bg-yellow-500', 'bg-red-600', 'bg-purple-600'];
+
   return (
     <section className="bg-[#0b1220] p-4 rounded-lg shadow-inner h-full min-h-[260px] flex flex-col">
       <div className="mb-3 flex items-center justify-between">
@@ -191,7 +191,7 @@ const NumberGrid = ({ calledNumbers }) => {
       <div className="flex-1 overflow-auto">
         <table className="w-full border-separate" style={{ borderSpacing: '4px' }}>
           <thead>
-            <tr>{headers.map((letter, index) => (<th key={letter} className={`text-white font-bold text-sm text-center rounded ${headerColors[index]} py-1`}>{letter}</th>))}</tr>
+            <tr>{headers.map((letter, index) => (<th key={letter} className={"text-white font-bold text-sm text-center rounded py-1 " + headerColors[index]}>{letter}</th>))}</tr>
           </thead>
           <tbody>
             {Array.from({ length: 15 }).map((_, rowIndex) => (
@@ -199,8 +199,8 @@ const NumberGrid = ({ calledNumbers }) => {
                 {Array.from({ length: 5 }).map((_, colIndex) => {
                   const num = colIndex * 15 + rowIndex + 1;
                   const isCalled = calledNumbers.has(num);
-                  const cellClass = isCalled ? 'bg-yellow-500 text-black font-black shadow-[0_0_8px_rgba(250,204,21,0.6)] scale-105' : 'bg-transparent text-gray-600';
-                  return (<td key={num} className={`text-center text-sm py-1.5 rounded transition-all ${cellClass}`}>{num}</td>);
+                  const cellClass = isCalled ? "bg-yellow-500 text-black font-black shadow-[0_0_8px_rgba(250,204,21,0.6)] scale-105" : "bg-transparent text-gray-600";
+                  return (<td key={num} className={"text-center text-sm py-1.5 rounded transition-all " + cellClass}>{num}</td>);
                 })}
               </tr>
             ))}
@@ -213,9 +213,10 @@ const NumberGrid = ({ calledNumbers }) => {
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
-  const [isPaused, setIsPaused] = useState(true);
   
-  // NEW STATE: Tracks if audio is currently playing
+  // NEW: Added 'hasStarted' state to control the entire flow
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
@@ -226,7 +227,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [checkResult, setCheckResult] = useState(null);
   const socketRef = useRef(null);
 
-  const voiceFolder = audioLanguage === 'Amharic Male 2' ? 'male2' : 'male';
+  const voiceFolder = audioLanguage === 'Amharic Male 2' ? 'male2' : (audioLanguage === 'Amharic Male 3' ? 'male3' : 'male');
 
   const prizeAmount = (() => {
     if (!game || !game.active_card_numbers) return '0.00';
@@ -238,7 +239,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   useEffect(() => {
     const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
     const apiHost = (import.meta.env.VITE_API_BASE || "").replace(/^https?:\/\//, "").replace(/\/api$/, "");
-    const url = `${wsProto}://${apiHost}/ws/game/${game.id}/?token=${token}`;
+    const url = wsProto + "://" + apiHost + "/ws/game/" + game.id + "/?token=" + token;
     socketRef.current = new WebSocket(url);
 
     socketRef.current.onmessage = (ev) => {
@@ -248,34 +249,34 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         setCalledNumbers(prev => { const next = new Set(prev); next.add(newNumber); return next; });
         setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
         
-        const formattedNum = newNumber < 10 ? `0${newNumber}` : newNumber;
+        const formattedNum = newNumber < 10 ? "0" + newNumber : newNumber;
         
-        // Pause the countdown while the audio plays
         setIsAudioPlaying(true);
         setCountdown(callSpeed);
 
-        playAudio(`/audio/${voiceFolder}/${getBingoLetter(newNumber)}${formattedNum}.mp3`, () => {
-          // Audio finished! Resume the countdown timer.
+        playAudio("/audio/" + voiceFolder + "/" + getBingoLetter(newNumber) + formattedNum + ".mp3", () => {
           setIsAudioPlaying(false);
         });
       }
     };
 
-    socketRef.current.onopen = () => {
-      // Pause game while intro audio plays
-      setIsAudioPlaying(true);
-      playAudio(`/audio/${voiceFolder}/game_start.mp3`, () => {
-        setIsAudioPlaying(false);
-        setIsPaused(false);
-      });
-    };
-
+    // REMOVED: Auto-start logic from here. The agent will trigger it manually!
     return () => { if (socketRef.current) socketRef.current.close(); };
   }, [game.id, token, callSpeed, voiceFolder]);
 
-  // The Timer Logic: Will NOT tick down if audio is playing
+  // NEW: The Manual Start Button Logic
+  const handleStartGame = () => {
+    setHasStarted(true);
+    setIsAudioPlaying(true);
+    playAudio("/audio/" + voiceFolder + "/game_start.mp3", () => {
+      setIsAudioPlaying(false);
+      setIsPaused(false); // Unpause the game so the timer can begin!
+    });
+  };
+
   useEffect(() => {
-    if (isPaused || isAudioPlaying) return;
+    // Only run timer if the game HAS STARTED, and is NOT paused, and AUDIO is NOT playing
+    if (!hasStarted || isPaused || isAudioPlaying) return;
     
     const timerId = setInterval(() => {
       setCountdown(prev => {
@@ -290,27 +291,28 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     }, 1000);
     
     return () => clearInterval(timerId);
-  }, [isPaused, isAudioPlaying, callSpeed]);
+  }, [hasStarted, isPaused, isAudioPlaying, callSpeed]);
 
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
     try {
-      const response = await api.get(`/check_win/${game.id}/${cardNumberToCheck}/`);
+      const response = await api.get("/check_win/" + game.id + "/" + cardNumberToCheck + "/");
       setCheckResult(response.data);
       setIsModalVisible(true);
     } catch (error) {
-      alert(`Error: Card not found or not active.`);
+      alert("Error: Card not found or not active.");
     }
   }
 
   const handleEndGame = () => {
     setIsPaused(true);
-    playAudio(`/audio/${voiceFolder}/game_end.mp3`);
-    setTimeout(() => { onNav('create'); }, 1500);
+    playAudio("/audio/" + voiceFolder + "/game_end.mp3", () => {
+        setTimeout(() => { onNav('create'); }, 500);
+    });
   };
 
   const handleShuffle = () => {
-    playAudio(`/audio/${voiceFolder}/shuffle.mp3`);
+    playAudio("/audio/" + voiceFolder + "/shuffle.mp3");
   };
 
   return (
@@ -345,8 +347,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] text-gray-500 font-black uppercase mb-1">Live Status</div>
-                  <div className={`px-4 py-1 rounded-full text-xs font-black uppercase ${isPaused ? 'bg-yellow-500 text-black' : 'bg-green-600 text-white animate-pulse'}`}>
-                    {isPaused ? 'Paused' : 'Running'}
+                  <div className={"px-4 py-1 rounded-full text-xs font-black uppercase " + (!hasStarted ? 'bg-gray-600 text-white' : isPaused ? 'bg-yellow-500 text-black' : 'bg-green-600 text-white animate-pulse')}>
+                    {!hasStarted ? 'WAITING' : isPaused ? 'Paused' : 'Running'}
                   </div>
                 </div>
               </div>
@@ -357,20 +359,29 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 <div className="flex-0 md:w-48 w-full">
                   <div className="text-[10px] text-gray-500 font-black uppercase mb-2">Next Ball In</div>
                   <div className="bg-gray-900 border-2 border-gray-800 text-green-500 rounded-2xl py-8 text-center text-7xl font-black shadow-inner">
-                    {/* Visual indicator that audio is playing! */}
-                    <span>{isPaused ? '--' : isAudioPlaying ? '🔊' : countdown}</span>
+                    <span>{!hasStarted ? '--' : isPaused ? '--' : isAudioPlaying ? '🔊' : countdown}</span>
                   </div>
                 </div>
+                
                 <div className="flex-1 flex flex-col gap-4 w-full">
-                  <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 border-b-4 border-teal-900 transition-all active:border-b-0 active:translate-y-1">
-                    🎲 SHUFFLE (መቀላቀያ)
-                  </button>
+                  {/* DYNAMIC BUTTON LOGIC */}
+                  {!hasStarted ? (
+                    <button onClick={handleStartGame} className="w-full py-6 rounded-xl font-black text-2xl bg-green-600 hover:bg-green-500 border-b-4 border-green-800 transition-all active:border-b-0 active:translate-y-1 shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                      ▶ START GAME
+                    </button>
+                  ) : (
+                    <>
+                      <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 border-b-4 border-teal-900 transition-all active:border-b-0 active:translate-y-1">
+                        🎲 SHUFFLE (መቀላቀያ)
+                      </button>
 
-                  <button onClick={() => setIsPaused(prev => !prev)} className={`w-full py-4 rounded-xl font-black text-xl ${isPaused ? 'bg-indigo-600 hover:bg-indigo-700 border-indigo-900' : 'bg-orange-500 hover:bg-orange-600 border-orange-900'} border-b-4 transition-all active:border-b-0 active:translate-y-1`}>
-                    {isPaused ? '▶ RESUME CALLS' : '⏸ PAUSE CALLS'}
-                  </button>
+                      <button onClick={() => setIsPaused(prev => !prev)} className={"w-full py-4 rounded-xl font-black text-xl border-b-4 transition-all active:border-b-0 active:translate-y-1 " + (isPaused ? 'bg-indigo-600 hover:bg-indigo-700 border-indigo-900' : 'bg-orange-500 hover:bg-orange-600 border-orange-900')}>
+                        {isPaused ? '▶ RESUME CALLS' : '⏸ PAUSE CALLS'}
+                      </button>
+                    </>
+                  )}
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mt-2">
                     <input type="number" placeholder="Enter Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="flex-1 bg-gray-900 border-2 border-gray-800 rounded-xl px-5 py-4 text-2xl font-black focus:border-yellow-500 outline-none transition-colors"/>
                     <button onClick={handleCheckCard} className="px-8 bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl font-black text-xl border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1">CHECK</button>
                   </div>
@@ -382,12 +393,12 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 <h3 className="text-xs text-gray-500 font-black uppercase mb-4 tracking-widest">Recent Calls</h3>
                 <div className="flex flex-wrap gap-4 items-start">
                   {currentNumber && (
-                    <div className={`w-24 h-24 rounded-full border-4 flex items-center justify-center ${getLetterColorClass(getBingoLetter(currentNumber))} bg-gray-900 shadow-[0_0_20px_rgba(255,255,255,0.1)]`}>
+                    <div className={"w-24 h-24 rounded-full border-4 flex items-center justify-center bg-gray-900 shadow-[0_0_20px_rgba(255,255,255,0.1)] " + getLetterColorClass(getBingoLetter(currentNumber))}>
                       <span className="text-3xl font-black text-white">{getBingoLetter(currentNumber)}{currentNumber}</span>
                     </div>
                   )}
                   {callHistory.length > 0 ? callHistory.slice(0, 8).map((num, i) => (
-                    <div key={i} className={`w-16 h-16 rounded-full border-2 flex items-center justify-center ${getLetterColorClass(getBingoLetter(num))} bg-gray-900 opacity-60`}>
+                    <div key={i} className={"w-16 h-16 rounded-full border-2 flex items-center justify-center bg-gray-900 opacity-60 " + getLetterColorClass(getBingoLetter(num))}>
                       <span className="text-lg font-black text-white">{getBingoLetter(num)}{num}</span>
                     </div>
                   )) : null}
