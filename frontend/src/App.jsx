@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Login from './components/Login';
 import CreateGameWizard from './components/CreateGameWizard';
+import RegisterCardsPage from './components/RegisterCardsPage';
 import GameRunner from './components/GameRunner';
 import Sidebar from './components/Sidebar';
 import TransactionHistory from './components/TransactionHistory';
@@ -90,8 +91,18 @@ export default function App() {
     refreshDashboardData();
   }
 
+  // MODIFIED: Goes to the Registration Phase instead of the Game Runner
   function handleGameCreated(game, settings) {
     const newGameState = { game, settings };
+    localStorage.setItem('vladBingoGameState', JSON.stringify(newGameState));
+    setGameState(newGameState);
+    setView('register'); 
+    refreshDashboardData();
+  }
+
+  // NEW: Function to move from Registration to Live Game
+  function handleStartCalling(updatedGame) {
+    const newGameState = { ...gameState, game: updatedGame };
     localStorage.setItem('vladBingoGameState', JSON.stringify(newGameState));
     setGameState(newGameState);
     setView('runner');
@@ -99,7 +110,8 @@ export default function App() {
   }
   
   const handleNav = (newView) => {
-    if (newView !== 'runner') {
+    // Only clear the game state if we are completely leaving the active game area
+    if (newView !== 'runner' && newView !== 'register') {
       localStorage.removeItem('vladBingoGameState');
       setGameState({ game: null, settings: { callSpeed: 6, audioLanguage: 'male' } });
     }
@@ -140,6 +152,12 @@ export default function App() {
       />
       <main className={`flex-1 overflow-y-auto transition-all duration-300 ${marginClass}`}>
         {view === 'create' && <CreateGameWizard onCreated={handleGameCreated} />}
+        
+        {/* NEW: The Registration Waiting Room */}
+        {view === 'register' && gameState.game && (
+          <RegisterCardsPage game={gameState.game} onStartGame={handleStartCalling} />
+        )}
+
         {view === 'report' && <TransactionHistory />}
       </main>
     </div>
