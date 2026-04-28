@@ -214,7 +214,6 @@ const NumberGrid = ({ calledNumbers }) => {
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
   
-  // NEW: Added 'hasStarted' state to control the entire flow
   const [hasStarted, setHasStarted] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -260,22 +259,19 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       }
     };
 
-    // REMOVED: Auto-start logic from here. The agent will trigger it manually!
     return () => { if (socketRef.current) socketRef.current.close(); };
   }, [game.id, token, callSpeed, voiceFolder]);
 
-  // NEW: The Manual Start Button Logic
   const handleStartGame = () => {
     setHasStarted(true);
     setIsAudioPlaying(true);
     playAudio("/audio/" + voiceFolder + "/game_start.mp3", () => {
       setIsAudioPlaying(false);
-      setIsPaused(false); // Unpause the game so the timer can begin!
+      setIsPaused(false); 
     });
   };
 
   useEffect(() => {
-    // Only run timer if the game HAS STARTED, and is NOT paused, and AUDIO is NOT playing
     if (!hasStarted || isPaused || isAudioPlaying) return;
     
     const timerId = setInterval(() => {
@@ -366,9 +362,15 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 <div className="flex-1 flex flex-col gap-4 w-full">
                   {/* DYNAMIC BUTTON LOGIC */}
                   {!hasStarted ? (
-                    <button onClick={handleStartGame} className="w-full py-6 rounded-xl font-black text-2xl bg-green-600 hover:bg-green-500 border-b-4 border-green-800 transition-all active:border-b-0 active:translate-y-1 shadow-[0_0_20px_rgba(34,197,94,0.4)]">
-                      ▶ START GAME
-                    </button>
+                    <>
+                      <button onClick={handleStartGame} className="w-full py-6 rounded-xl font-black text-2xl bg-green-600 hover:bg-green-500 border-b-4 border-green-800 transition-all active:border-b-0 active:translate-y-1 shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                        ▶ START GAME
+                      </button>
+                      {/* SHUFFLE BUTTON VISIBLE BEFORE START */}
+                      <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 border-b-4 border-teal-900 transition-all active:border-b-0 active:translate-y-1">
+                        🎲 SHUFFLE (መቀላቀያ)
+                      </button>
+                    </>
                   ) : (
                     <>
                       <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 border-b-4 border-teal-900 transition-all active:border-b-0 active:translate-y-1">
