@@ -5,6 +5,9 @@ export default function RegisterCardsPage({ game, onStartGame }) {
   const [activeGame, setActiveGame] = useState(game);
   const [newCard, setNewCard] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // NEW: State for our custom error popup
+  const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
 
   const prizeAmount = ((activeGame.amount || 0) * (activeGame.active_card_numbers?.length || 0) * (1 - (activeGame.commission_percentage || 0)/100)).toFixed(2);
 
@@ -14,20 +17,44 @@ export default function RegisterCardsPage({ game, onStartGame }) {
     setLoading(true);
     try {
       const res = await api.post(`/games/${activeGame.id}/add_card/`, { card_number: newCard });
-      setActiveGame(res.data); // Updates the card count, prize, and the list!
+      setActiveGame(res.data);
       setNewCard('');
     } catch (err) {
-      alert(err.response?.data?.detail || "Failed to add card");
+      const errorMsg = err.response?.data?.detail || "Failed to add card";
+      
+      // If the backend says it's already in the game, show our custom Amharic message
+      if (errorMsg.includes("already in this game")) {
+        setErrorPopup({ show: true, message: `Card #${newCard} ተይዟል (Already Taken)` });
+      } else {
+        setErrorPopup({ show: true, message: errorMsg });
+      }
+      setNewCard(''); // Clear the input so they can type the next one quickly
     } finally {
       setLoading(false);
     }
   };
 
-  // Sort the cards so they appear in numerical order
   const sortedCards = [...(activeGame.active_card_numbers || [])].sort((a, b) => a - b);
 
   return (
-    <div className="bg-[#081226] min-h-screen flex flex-col items-center justify-center p-6 text-white font-sans">
+    <div className="bg-[#081226] min-h-screen flex flex-col items-center justify-center p-6 text-white font-sans relative">
+      
+      {/* NEW: Custom Error Popup Modal */}
+      {errorPopup.show && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-[#111827] p-8 rounded-2xl border-2 border-red-600 w-full max-w-sm shadow-[0_0_30px_rgba(220,38,38,0.4)] text-center transform transition-all scale-105">
+            <div className="text-red-500 text-6xl mb-4">⚠️</div>
+            <h3 className="text-2xl font-black text-white mb-6">{errorPopup.message}</h3>
+            <button 
+              onClick={() => setErrorPopup({ show: false, message: '' })}
+              className="w-full bg-red-600 hover:bg-red-700 py-3 rounded-xl font-bold text-xl transition-transform active:scale-95"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-[#111827] p-8 rounded-2xl border border-gray-800 w-full max-w-2xl shadow-2xl">
         
         <div className="text-center mb-8">
@@ -59,7 +86,6 @@ export default function RegisterCardsPage({ game, onStartGame }) {
           </button>
         </form>
 
-        {/* NEW: The Registered Cards List */}
         <div className="mb-8">
           <h3 className="text-xs text-gray-500 font-bold uppercase mb-3 tracking-widest">Active Card List</h3>
           <div className="bg-gray-950 border border-gray-800 rounded-xl p-4 max-h-48 overflow-y-auto">
