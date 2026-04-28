@@ -57,8 +57,8 @@ class CreateGameView(APIView):
             return Response({"detail": "You must select at least 3 cards to start a game."}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            bet_amount_per_card = Decimal(bet_amount_per_card)
-            comm_pct = Decimal(commission_percentage)
+            bet_amount_per_card = Decimal(str(bet_amount_per_card))
+            comm_pct = Decimal(str(commission_percentage))
         except (TypeError, ValueError):
             return Response({"detail": "Invalid bet or commission amount."}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -137,3 +137,52 @@ class CheckWinView(APIView):
             'is_winner': is_winner,
             'card_data': { 'card_number': card.card_number, 'board': card.board }
         })
+
+# --- NEW: ADD LATE CARD VIEW ---
+class AddCardToGameView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, game_id):
+        user = request.user
+        game = get_object_or_404(GameRound, pk=game_id)
+        
+        if game.agent != user:
+            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+            
+        card_num = request.data.get("card_number")
+        if not card_num:
+            return Response({"detail": "Card number required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            card_num = int(card_num)
+        except ValueError:
+            return Response({"detail": "Invalid card number."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if card_num in game.active_card_numbers:
+            return Response({"detail": "Card already in this game."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not PermanentCard.objects.filter(card_number=card_num).exists():
+            return Response({"detail": "Card does not exist."}, status=status.HTTP_404_NOT_FOUND)
+            
+        # Deduct commission for exactly 1 late card
+        comm_cost = Decimal(str(game.amount)) * (Decimal(str(game.commission_percentage)) / Decimal('100'))
+        
+        if user.operational_credit < comm_cost:
+            return Response({"detail": "Insufficient credit for this card."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user.operational_credit -= comm_cost
+        user.save()
+        
+        # Add card to the game and save
+        game.active_card_numbers.append(card_num)
+        game.save()
+        
+        Transaction.objects.create(
+            agent=user, type="LATE_CARD_ADD", amount=-comm_cost,
+            running_balance=user.operational_credit, 
+            note=f"Late card {card_num} added to Game #{game.id}"
+        )
+        
+        # Return the updated game data so the frontend updates the prize pool!
+        serializer = GameRoundSerializer(game)
+        return Response(serializer.data, status=status.HTTP_200_OK)
