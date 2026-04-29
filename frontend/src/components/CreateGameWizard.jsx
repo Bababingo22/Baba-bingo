@@ -3,7 +3,8 @@ import api from '../services/api';
 
 const STORAGE_KEYS = {
   CALL_SPEED: 'vlad:lastCallSpeed',
-  SELECTED_CARDS: 'vlad:lastSelectedCards'
+  SELECTED_CARDS: 'vlad:lastSelectedCards',
+  COMMISSION: 'vlad:lastCommission' // NEW: Key to save commission
 };
 
 function loadNumber(key, fallback) {
@@ -33,12 +34,15 @@ export default function CreateGameWizard({ onCreated }) {
   const [betAmount, setBetAmount] = useState(10); 
   const [audioLanguage, setAudioLanguage] = useState('Amharic Male');
   const [callSpeed, setCallSpeed] = useState(() => loadNumber(STORAGE_KEYS.CALL_SPEED, 6));
+  
+  // NEW: Load the last used commission, default to 20 if none saved
+  const [commissionPercentage, setCommissionPercentage] = useState(() => loadNumber(STORAGE_KEYS.COMMISSION, 20));
+  
   const initialSelected = loadArray(STORAGE_KEYS.SELECTED_CARDS, []);
   const [selectedCards, setSelectedCards] = useState(() => new Set(initialSelected));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [winningPattern, setWinningPattern] = useState('All Common Patterns');
-  const [commissionPercentage, setCommissionPercentage] = useState(20);
 
   const getSpeedButtonClass = (speed) =>
     gameSpeed === speed ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300';
@@ -57,6 +61,13 @@ export default function CreateGameWizard({ onCreated }) {
       localStorage.setItem(STORAGE_KEYS.CALL_SPEED, JSON.stringify(Number(callSpeed)));
     } catch (e) { console.warn('Unable to persist call speed', e); }
   }, [callSpeed]);
+
+  // NEW: Save commission whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.COMMISSION, JSON.stringify(Number(commissionPercentage)));
+    } catch (e) { console.warn('Unable to persist commission', e); }
+  }, [commissionPercentage]);
 
   const toggleCardSelection = (cardNumber) => {
     setSelectedCards((prev) => {
@@ -87,6 +98,7 @@ export default function CreateGameWizard({ onCreated }) {
       try {
         localStorage.setItem(STORAGE_KEYS.SELECTED_CARDS, JSON.stringify(Array.from(selectedCards)));
         localStorage.setItem(STORAGE_KEYS.CALL_SPEED, JSON.stringify(Number(callSpeed)));
+        localStorage.setItem(STORAGE_KEYS.COMMISSION, JSON.stringify(Number(commissionPercentage)));
       } catch (e) {
         console.warn('Unable to persist after submit', e);
       }
@@ -167,7 +179,6 @@ export default function CreateGameWizard({ onCreated }) {
             <select value={audioLanguage} onChange={(e) => setAudioLanguage(e.target.value)} className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-300 text-sm">
               <option>Amharic Male</option>
               <option>Amharic Male 2</option>
-              <option>Amharic Male 3</option>
             </select>
           </div>
         </div>
@@ -184,18 +195,13 @@ export default function CreateGameWizard({ onCreated }) {
             </div>
           </div>
           
-          {/* ZERO GAP GRID: Fits 40 columns perfectly on Desktop */}
           <div className="grid grid-cols-10 sm:grid-cols-20 md:grid-cols-25 lg:grid-cols-33 xl:grid-cols-40 gap-0 border-t border-l border-gray-900 rounded-sm overflow-hidden">
             {cardNumbers.map((num) => (
               <button 
                 type="button" 
                 key={num} 
                 onClick={() => toggleCardSelection(num)} 
-                className={`w-full h-6 flex items-center justify-center border-b border-r border-gray-900 text-[11px] transition-colors ${
-                  selectedCards.has(num) 
-                    ? 'bg-yellow-500 text-black font-black z-10 relative shadow-[0_0_8px_rgba(250,204,21,0.5)]' 
-                    : 'bg-[#111827] text-white font-bold hover:bg-gray-600'
-                }`}
+                className={"w-full h-6 flex items-center justify-center border-b border-r border-gray-900 text-[11px] transition-colors " + (selectedCards.has(num) ? 'bg-yellow-500 text-black font-black z-10 relative shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'bg-[#111827] text-white font-bold hover:bg-gray-600')}
               >
                 {num}
               </button>
