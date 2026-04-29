@@ -58,7 +58,7 @@ const CardCheckModal = ({ checkResult, calledNumbers, onClose, voiceFolder }) =>
   const col5 = 'bg-purple-500';
   const colors = [col1, col2, col3, col4, col5];
   
-  // FIXED: Read the board as Rows instead of Columns (board[r][c] instead of board[c][r])
+  // FIXED: Read the board as Rows instead of Columns
   const rows = Array.from({ length: 5 }).map((_, r) => Array.from({ length: 5 }, (_, c) => board[r][c]));
   
   const isCellCalled = (val) => {
@@ -237,12 +237,21 @@ const NumberGrid = ({ calledNumbers }) => {
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
-  const [countdown, setCountdown] = useState(callSpeed);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  
+  // RESTORED: hasStarted state for the Start Button
+  const [hasStarted, setHasStarted] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  
   const [cardNumberToCheck, setCardNumberToCheck] = useState('');
   const [checkResult, setCheckResult] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  
+  // RESTORED: callHistory and currentNumber for the Recent Calls section
+  const [currentNumber, setCurrentNumber] = useState(null);
+  const [callHistory, setCallHistory] = useState([]);
+  
+  const [countdown, setCountdown] = useState(callSpeed);
   const socketRef = useRef(null);
 
   const voiceFolder = 'male';
@@ -264,6 +273,9 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
         const newNumber = data.number;
         setCalledNumbers(prev => { const next = new Set(prev); next.add(newNumber); return next; });
         
+        // RESTORED: Update Recent Calls
+        setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
+        
         const formattedNum = newNumber < 10 ? "0" + newNumber : newNumber.toString();
         
         setIsAudioPlaying(true);
@@ -276,19 +288,21 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       }
     };
 
-    socketRef.current.onopen = () => {
-      setIsAudioPlaying(true);
-      playAudio("/audio/" + voiceFolder + "/game_start.mp3", () => {
-        setIsAudioPlaying(false);
-        setIsPaused(false);
-      });
-    };
-
     return () => { if (socketRef.current) socketRef.current.close(); };
   }, [game.id, token, callSpeed]);
 
+  // RESTORED: Start Game Logic
+  const handleStartGame = () => {
+    setHasStarted(true);
+    setIsAudioPlaying(true);
+    playAudio("/audio/" + voiceFolder + "/game_start.mp3", () => {
+      setIsAudioPlaying(false);
+      setIsPaused(false); 
+    });
+  };
+
   useEffect(() => {
-    if (isPaused || isAudioPlaying) return;
+    if (!hasStarted || isPaused || isAudioPlaying) return;
     
     const timerId = setInterval(() => {
       setCountdown(prev => {
@@ -303,7 +317,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     }, 1000);
     
     return () => clearInterval(timerId);
-  }, [isPaused, isAudioPlaying, callSpeed]);
+  }, [hasStarted, isPaused, isAudioPlaying, callSpeed]);
 
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
@@ -327,7 +341,8 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     playAudio("/audio/" + voiceFolder + "/shuffle.mp3");
   };
 
-  const pauseStatusClass = isPaused ? 'bg-yellow-500 text-black' : 'bg-green-600 text-white';
+  const pauseStatusClass = !hasStarted ? 'bg-gray-600 text-white' : isPaused ? 'bg-yellow-500 text-black' : 'bg-green-600 text-white';
+  const pauseStatusText = !hasStarted ? 'WAITING' : isPaused ? 'Paused' : 'Running';
 
   return (
     <>
@@ -362,7 +377,7 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 <div className="text-right">
                   <div className="text-[10px] text-gray-500 font-black uppercase mb-1">Live Status</div>
                   <div className={"px-4 py-1 rounded-full text-xs font-black uppercase " + pauseStatusClass}>
-                    {isPaused ? 'Paused' : 'Running'}
+                    {pauseStatusText}
                   </div>
                 </div>
               </div>
@@ -373,25 +388,57 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 <div className="flex-0 md:w-48 w-full">
                   <div className="text-[10px] text-gray-500 font-black uppercase mb-2">Next Ball In</div>
                   <div className="bg-gray-950 border-2 border-gray-800 text-green-500 rounded-2xl py-8 text-center text-7xl font-black">
-                    <span>{isPaused ? '--' : isAudioPlaying ? '🔊' : countdown}</span>
+                    <span>{!hasStarted ? '--' : isPaused ? '--' : isAudioPlaying ? '🔊' : countdown}</span>
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col gap-4 w-full">
-                  <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 text-white">
-                    🎲 SHUFFLE 
-                  </button>
+                  
+                  {/* RESTORED: Start Game Button Logic */}
+                  {!hasStarted ? (
+                    <>
+                      <button onClick={handleStartGame} className="w-full py-6 rounded-xl font-black text-2xl bg-green-600 hover:bg-green-500 text-white">
+                        ▶ START GAME
+                      </button>
+                      <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 text-white">
+                        🎲 SHUFFLE
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 text-white">
+                        🎲 SHUFFLE
+                      </button>
+                      <button onClick={() => setIsPaused(prev => !prev)} className={"w-full py-4 rounded-xl font-black text-xl text-white " + (isPaused ? 'bg-indigo-600' : 'bg-orange-500')}>
+                        {isPaused ? '▶ RESUME CALLS' : '⏸ PAUSE CALLS'}
+                      </button>
+                    </>
+                  )}
 
-                  <button onClick={() => setIsPaused(prev => !prev)} className={"w-full py-4 rounded-xl font-black text-xl text-white " + (isPaused ? 'bg-indigo-600' : 'bg-orange-500')}>
-                    {isPaused ? '▶ RESUME CALLS' : '⏸ PAUSE CALLS'}
-                  </button>
-
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mt-2">
                     <input type="number" placeholder="Enter Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="flex-1 bg-gray-950 border-2 border-gray-800 rounded-xl px-5 py-4 text-2xl font-black text-white"/>
                     <button onClick={handleCheckCard} className="px-8 bg-yellow-500 text-black rounded-xl font-black text-xl">CHECK</button>
                   </div>
                   <button onClick={handleEndGame} className="w-full py-3 rounded-xl bg-gray-800 text-red-500 font-black">END GAME</button>
                 </div>
               </div>
+
+              {/* RESTORED: Recent Calls Section */}
+              <div className="bg-gray-900 p-5 rounded-xl border border-gray-800 flex-1">
+                <h3 className="text-xs text-gray-500 font-black uppercase mb-4">Recent Calls</h3>
+                <div className="flex flex-wrap gap-4 items-start">
+                  {currentNumber && (
+                    <div className={"w-24 h-24 rounded-full border-4 flex items-center justify-center bg-gray-950 " + getLetterColorClass(getBingoLetter(currentNumber))}>
+                      <span className="text-3xl font-black text-white">{getBingoLetter(currentNumber)}{currentNumber}</span>
+                    </div>
+                  )}
+                  {callHistory.length > 0 ? callHistory.slice(0, 8).map((num, i) => (
+                    <div key={i} className={"w-16 h-16 rounded-full border-2 flex items-center justify-center bg-gray-950 opacity-60 " + getLetterColorClass(getBingoLetter(num))}>
+                      <span className="text-lg font-black text-white">{getBingoLetter(num)}{num}</span>
+                    </div>
+                  )) : null}
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
