@@ -1,12 +1,34 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vlad Bingo</title>
+
+    <!-- PWA: Link to the app manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Mobile UI: Set the color of the browser bar -->
+    <meta name="theme-color" content="#121212" />
+
+    <!-- PWA: Register the Service Worker for Offline Mode -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('Bingo App: ServiceWorker registered successfully');
+            })
+            .catch(error => {
+              console.log('Bingo App: ServiceWorker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Main entry point for your React app -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
