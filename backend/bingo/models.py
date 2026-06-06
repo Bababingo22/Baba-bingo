@@ -4,7 +4,6 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 import random
-import json
 
 class User(AbstractUser):
     is_agent = models.BooleanField(default=False)
@@ -23,6 +22,7 @@ class Transaction(models.Model):
     TRANSACTION_TYPES = [
         ("MANUAL", "Manual Adjustment"),
         ("GAME_LAUNCH", "Game Launch Cost"),
+        ("LATE_CARD_ADD", "Late Card Addition"), # Added to match views.py
         ("CREDIT", "Credit"),
         ("DEBIT", "Debit"),
     ]
@@ -39,17 +39,6 @@ class Transaction(models.Model):
     def __str__(self):
         return f"{self.agent.username} {self.type} {self.amount} at {self.timestamp}"
 
-def generate_single_board():
-    board = []
-    ranges = [(1,15), (16,30), (31,45), (46,60), (61,75)]
-    for col_idx, (a,b) in enumerate(ranges):
-        nums = random.sample(range(a, b+1), 5)
-        if col_idx == 2:
-            nums[2] = "FREE"
-        board.append(nums)
-    rows = [[board[col][row] for col in range(5)] for row in range(5)]
-    return rows
-
 class PermanentCard(models.Model):
     card_number = models.PositiveSmallIntegerField(unique=True)
     board = models.JSONField()
@@ -62,7 +51,7 @@ class GameRound(models.Model):
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="game_rounds")
     created_at = models.DateTimeField(default=timezone.now)
     active_card_numbers = models.JSONField(default=list) 
-    called_numbers = models.JSONField(default=list)
+    called_numbers = models.JSONField(default=list) # Used for the offline sequence
     total_calls = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="PENDING")
     game_type = models.CharField(max_length=32, default="Regular")
