@@ -212,7 +212,8 @@ const NumberGrid = ({ calledNumbers }) => {
 };
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
-  const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
+  // 🚨 THE FIX IS HERE: Start with an empty board `new Set()`, not `game.called_numbers`
+  const [calledNumbers, setCalledNumbers] = useState(new Set());
   
   const [hasStarted, setHasStarted] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
