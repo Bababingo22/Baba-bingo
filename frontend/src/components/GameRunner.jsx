@@ -214,7 +214,6 @@ const NumberGrid = ({ calledNumbers }) => {
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
   const [calledNumbers, setCalledNumbers] = useState(new Set(game.called_numbers || []));
   
-  // NEW: Added 'hasStarted' state to control the entire flow
   const [hasStarted, setHasStarted] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -225,7 +224,10 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
   const [callHistory, setCallHistory] = useState([]);
   const [countdown, setCountdown] = useState(callSpeed);
   const [checkResult, setCheckResult] = useState(null);
-  const socketRef = useRef(null);
+  
+  // --- OFFLINE FIX: Local Sequence Engine ---
+  const [gameSequence, setGameSequence] = useState([]);
+  const sequenceIndexRef = useRef(0);
 
   const voiceFolder = audioLanguage === 'Amharic Male 2' ? 'male2' : (audioLanguage === 'Amharic Male 3' ? 'male3' : 'male');
 
@@ -236,53 +238,58 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     return (totalPot - commissionAmount).toFixed(2);
   })();
 
+  // 1. Load the offline sequence from memory when component mounts
   useEffect(() => {
-    const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
-    const apiHost = (import.meta.env.VITE_API_BASE || "").replace(/^https?:\/\//, "").replace(/\/api$/, "");
-    const url = wsProto + "://" + apiHost + "/ws/game/" + game.id + "/?token=" + token;
-    socketRef.current = new WebSocket(url);
-
-    socketRef.current.onmessage = (ev) => {
-      const data = JSON.parse(ev.data);
-      if (data.action === "call_number") {
-        const newNumber = data.number;
-        setCalledNumbers(prev => { const next = new Set(prev); next.add(newNumber); return next; });
-        setCurrentNumber(prev => { if (prev) { setCallHistory(h => [prev, ...h]); } return newNumber; });
-        
-        const formattedNum = newNumber < 10 ? "0" + newNumber : newNumber;
-        
-        setIsAudioPlaying(true);
-        setCountdown(callSpeed);
-
-        playAudio("/audio/" + voiceFolder + "/" + getBingoLetter(newNumber) + formattedNum + ".mp3", () => {
-          setIsAudioPlaying(false);
-        });
+    try {
+      const storedSeq = localStorage.getItem('vlad:activeGameSequence');
+      if (storedSeq) {
+        setGameSequence(JSON.parse(storedSeq));
+      } else if (game.calling_sequence) {
+        setGameSequence(game.calling_sequence);
       }
-    };
+    } catch (e) {
+      console.error("Could not load offline sequence", e);
+    }
+  }, [game]);
 
-    // REMOVED: Auto-start logic from here. The agent will trigger it manually!
-    return () => { if (socketRef.current) socketRef.current.close(); };
-  }, [game.id, token, callSpeed, voiceFolder]);
-
-  // NEW: The Manual Start Button Logic
   const handleStartGame = () => {
     setHasStarted(true);
     setIsAudioPlaying(true);
     playAudio("/audio/" + voiceFolder + "/game_start.mp3", () => {
       setIsAudioPlaying(false);
-      setIsPaused(false); // Unpause the game so the timer can begin!
+      setIsPaused(false);
     });
   };
 
+  // 2. The Local Timer Engine (Replaces the WebSocket completely)
   useEffect(() => {
-    // Only run timer if the game HAS STARTED, and is NOT paused, and AUDIO is NOT playing
     if (!hasStarted || isPaused || isAudioPlaying) return;
     
     const timerId = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          if (socketRef.current?.readyState === WebSocket.OPEN) {
-            socketRef.current.send(JSON.stringify({ action: 'call_next' }));
+          // TIME TO CALL THE NEXT BALL
+          const currentIndex = sequenceIndexRef.current;
+          
+          if (currentIndex < gameSequence.length) {
+            const newNumber = gameSequence[currentIndex];
+            
+            // Update the screen UI
+            setCalledNumbers(prevSet => { const next = new Set(prevSet); next.add(newNumber); return next; });
+            setCurrentNumber(prevNum => { if (prevNum) { setCallHistory(h => [prevNum, ...h]); } return newNumber; });
+            
+            // Move pointer to the next ball
+            sequenceIndexRef.current = currentIndex + 1;
+            
+            // Play Audio
+            const formattedNum = newNumber < 10 ? "0" + newNumber : newNumber;
+            setIsAudioPlaying(true);
+            playAudio("/audio/" + voiceFolder + "/" + getBingoLetter(newNumber) + formattedNum + ".mp3", () => {
+              setIsAudioPlaying(false);
+            });
+          } else {
+            // All 75 balls have been called
+            setIsPaused(true);
           }
           return callSpeed;
         }
@@ -291,16 +298,19 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
     }, 1000);
     
     return () => clearInterval(timerId);
-  }, [hasStarted, isPaused, isAudioPlaying, callSpeed]);
+  }, [hasStarted, isPaused, isAudioPlaying, callSpeed, gameSequence, voiceFolder]);
 
   async function handleCheckCard() {
     if (!cardNumberToCheck) return alert("Please enter a card number.");
     try {
-      const response = await api.get("/check_win/" + game.id + "/" + cardNumberToCheck + "/");
+      // Send how many balls we've called locally so the server checks accurately
+      const ballsCalled = sequenceIndexRef.current;
+      const response = await api.get(`/check_win/${game.id}/${cardNumberToCheck}/?balls_called=${ballsCalled}`);
       setCheckResult(response.data);
       setIsModalVisible(true);
     } catch (error) {
-      alert("Error: Card not found or not active.");
+      // If internet drops during a Bingo check, warn the user
+      alert("Internet connection required to verify a WIN. Please reconnect to data/Wi-Fi to check card.");
     }
   }
 
@@ -364,7 +374,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 </div>
                 
                 <div className="flex-1 flex flex-col gap-4 w-full">
-                  {/* DYNAMIC BUTTON LOGIC */}
                   {!hasStarted ? (
                     <button onClick={handleStartGame} className="w-full py-6 rounded-xl font-black text-2xl bg-green-600 hover:bg-green-500 border-b-4 border-green-800 transition-all active:border-b-0 active:translate-y-1 shadow-[0_0_20px_rgba(34,197,94,0.4)]">
                       ▶ START GAME
