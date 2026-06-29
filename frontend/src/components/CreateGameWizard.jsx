@@ -4,7 +4,8 @@ import api from '../services/api';
 const STORAGE_KEYS = {
   CALL_SPEED: 'vlad:lastCallSpeed',
   SELECTED_CARDS: 'vlad:lastSelectedCards',
-  COMMISSION: 'vlad:lastCommission' // NEW: Key to save commission
+  COMMISSION: 'vlad:lastCommission', // NEW: Key to save commission
+  ACTIVE_SEQUENCE: 'vlad:activeGameSequence' // OFFLINE FIX: Key to save the 75 numbers
 };
 
 function loadNumber(key, fallback) {
@@ -95,6 +96,18 @@ export default function CreateGameWizard({ onCreated }) {
         call_speed_seconds: Number(callSpeed),
         commission_percentage: Number(commissionPercentage)
       });
+      
+      const gameData = resp.data;
+
+      // --- OFFLINE FIX: Save the 75 numbers to the phone memory ---
+      if (gameData.calling_sequence) {
+        try {
+          localStorage.setItem(STORAGE_KEYS.ACTIVE_SEQUENCE, JSON.stringify(gameData.calling_sequence));
+        } catch (e) {
+          console.warn('Unable to persist calling sequence', e);
+        }
+      }
+      
       try {
         localStorage.setItem(STORAGE_KEYS.SELECTED_CARDS, JSON.stringify(Array.from(selectedCards)));
         localStorage.setItem(STORAGE_KEYS.CALL_SPEED, JSON.stringify(Number(callSpeed)));
@@ -102,9 +115,12 @@ export default function CreateGameWizard({ onCreated }) {
       } catch (e) {
         console.warn('Unable to persist after submit', e);
       }
-      onCreated(resp.data, { callSpeed: Number(callSpeed), audioLanguage });
+      
+      // Pass the gameData (which now includes the sequence) to the GameRunner
+      onCreated(gameData, { callSpeed: Number(callSpeed), audioLanguage });
     } catch (err) {
-      setError(err.response?.data?.detail || 'An unknown error occurred.');
+      // Updated error message to remind about internet connection
+      setError(err.response?.data?.detail || 'Connection error. Internet is required to launch a game.');
     } finally {
       setIsLoading(false);
     }
