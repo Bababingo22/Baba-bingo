@@ -1,6 +1,6 @@
 {
-  "name": "Baba Bingo Offline",
-  "short_name": "Bingo",
+  "name": "Vlad Bingo",
+  "short_name": "Vlad Bingo",
   "description": "Play Bingo anywhere, even without internet.",
   "start_url": "/",
   "display": "standalone",
@@ -8,14 +8,10 @@
   "theme_color": "#121212",
   "icons": [
     {
-      "src": "/static/logo_192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/logo_512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/v-logo.svg",
+      "sizes": "192x192 512x512 any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
