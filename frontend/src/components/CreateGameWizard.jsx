@@ -4,16 +4,31 @@ import api from '../services/api';
 const STORAGE_KEYS = {
   CALL_SPEED: 'vlad:lastCallSpeed',
   SELECTED_CARDS: 'vlad:lastSelectedCards',
-  COMMISSION: 'vlad:lastCommission', // NEW: Key to save commission
-  ACTIVE_SEQUENCE: 'vlad:activeGameSequence' // OFFLINE FIX: Key to save the 75 numbers
+  COMMISSION: 'vlad:lastCommission',
+  ACTIVE_SEQUENCE: 'vlad:activeGameSequence',
+  // NEW KEYS TO SAVE EVERYTHING:
+  BET_AMOUNT: 'vlad:lastBetAmount',
+  GAME_SPEED: 'vlad:lastGameSpeed',
+  WINNING_PATTERN: 'vlad:lastWinningPattern',
+  AUDIO_LANGUAGE: 'vlad:lastAudioLanguage'
 };
 
+// Helpers to safely load data
 function loadNumber(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
     const n = JSON.parse(raw);
     return typeof n === 'number' ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function loadString(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? raw : fallback;
   } catch {
     return fallback;
   }
@@ -31,19 +46,19 @@ function loadArray(key, fallback) {
 }
 
 export default function CreateGameWizard({ onCreated }) {
-  const [gameSpeed, setGameSpeed] = useState('Regular');
-  const [betAmount, setBetAmount] = useState(10); 
-  const [audioLanguage, setAudioLanguage] = useState('Amharic Male');
+  // LOAD EVERYTHING FROM MEMORY (with defaults if empty)
+  const [gameSpeed, setGameSpeed] = useState(() => loadString(STORAGE_KEYS.GAME_SPEED, 'Regular'));
+  const [betAmount, setBetAmount] = useState(() => loadNumber(STORAGE_KEYS.BET_AMOUNT, 10)); 
+  const [audioLanguage, setAudioLanguage] = useState(() => loadString(STORAGE_KEYS.AUDIO_LANGUAGE, 'Amharic Male'));
   const [callSpeed, setCallSpeed] = useState(() => loadNumber(STORAGE_KEYS.CALL_SPEED, 6));
-  
-  // NEW: Load the last used commission, default to 20 if none saved
   const [commissionPercentage, setCommissionPercentage] = useState(() => loadNumber(STORAGE_KEYS.COMMISSION, 20));
+  const [winningPattern, setWinningPattern] = useState(() => loadString(STORAGE_KEYS.WINNING_PATTERN, 'All Common Patterns'));
   
   const initialSelected = loadArray(STORAGE_KEYS.SELECTED_CARDS, []);
   const [selectedCards, setSelectedCards] = useState(() => new Set(initialSelected));
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [winningPattern, setWinningPattern] = useState('All Common Patterns');
 
   const getSpeedButtonClass = (speed) =>
     gameSpeed === speed ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300';
@@ -51,24 +66,20 @@ export default function CreateGameWizard({ onCreated }) {
   const totalCards = 200;
   const cardNumbers = Array.from({ length: totalCards }, (_, i) => i + 1);
 
+  // SAVE EVERYTHING WHENEVER IT CHANGES
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.SELECTED_CARDS, JSON.stringify(Array.from(selectedCards)));
-    } catch (e) { console.warn('Unable to persist selected cards', e); }
-  }, [selectedCards]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem(STORAGE_KEYS.CALL_SPEED, JSON.stringify(Number(callSpeed)));
-    } catch (e) { console.warn('Unable to persist call speed', e); }
-  }, [callSpeed]);
-
-  // NEW: Save commission whenever it changes
-  useEffect(() => {
-    try {
       localStorage.setItem(STORAGE_KEYS.COMMISSION, JSON.stringify(Number(commissionPercentage)));
-    } catch (e) { console.warn('Unable to persist commission', e); }
-  }, [commissionPercentage]);
+      localStorage.setItem(STORAGE_KEYS.BET_AMOUNT, JSON.stringify(Number(betAmount)));
+      localStorage.setItem(STORAGE_KEYS.GAME_SPEED, gameSpeed);
+      localStorage.setItem(STORAGE_KEYS.WINNING_PATTERN, winningPattern);
+      localStorage.setItem(STORAGE_KEYS.AUDIO_LANGUAGE, audioLanguage);
+    } catch (e) {
+      console.warn('Unable to persist data', e);
+    }
+  }, [selectedCards, callSpeed, commissionPercentage, betAmount, gameSpeed, winningPattern, audioLanguage]);
 
   const toggleCardSelection = (cardNumber) => {
     setSelectedCards((prev) => {
@@ -99,7 +110,7 @@ export default function CreateGameWizard({ onCreated }) {
       
       const gameData = resp.data;
 
-      // --- OFFLINE FIX: Save the 75 numbers to the phone memory ---
+      // OFFLINE FIX: Save the 75 numbers to the phone memory
       if (gameData.calling_sequence) {
         try {
           localStorage.setItem(STORAGE_KEYS.ACTIVE_SEQUENCE, JSON.stringify(gameData.calling_sequence));
@@ -108,18 +119,9 @@ export default function CreateGameWizard({ onCreated }) {
         }
       }
       
-      try {
-        localStorage.setItem(STORAGE_KEYS.SELECTED_CARDS, JSON.stringify(Array.from(selectedCards)));
-        localStorage.setItem(STORAGE_KEYS.CALL_SPEED, JSON.stringify(Number(callSpeed)));
-        localStorage.setItem(STORAGE_KEYS.COMMISSION, JSON.stringify(Number(commissionPercentage)));
-      } catch (e) {
-        console.warn('Unable to persist after submit', e);
-      }
-      
-      // Pass the gameData (which now includes the sequence) to the GameRunner
+      // Pass the gameData to the GameRunner
       onCreated(gameData, { callSpeed: Number(callSpeed), audioLanguage });
     } catch (err) {
-      // Updated error message to remind about internet connection
       setError(err.response?.data?.detail || 'Connection error. Internet is required to launch a game.');
     } finally {
       setIsLoading(false);
