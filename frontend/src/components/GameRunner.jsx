@@ -212,7 +212,6 @@ const NumberGrid = ({ calledNumbers }) => {
 };
 
 export default function GameRunner({ game, token, user, callSpeed, audioLanguage, onNav }) {
-  // 🚨 THE FIX IS HERE: Start with an empty board `new Set()`, not `game.called_numbers`
   const [calledNumbers, setCalledNumbers] = useState(new Set());
   
   const [hasStarted, setHasStarted] = useState(false);
@@ -310,7 +309,6 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
       setCheckResult(response.data);
       setIsModalVisible(true);
     } catch (error) {
-      // If internet drops during a Bingo check, warn the user
       alert("Internet connection required to verify a WIN. Please reconnect to data/Wi-Fi to check card.");
     }
   }
@@ -375,21 +373,22 @@ export default function GameRunner({ game, token, user, callSpeed, audioLanguage
                 </div>
                 
                 <div className="flex-1 flex flex-col gap-4 w-full">
+                  
+                  {/* Primary Action Button */}
                   {!hasStarted ? (
                     <button onClick={handleStartGame} className="w-full py-6 rounded-xl font-black text-2xl bg-green-600 hover:bg-green-500 border-b-4 border-green-800 transition-all active:border-b-0 active:translate-y-1 shadow-[0_0_20px_rgba(34,197,94,0.4)]">
                       ▶ START GAME
                     </button>
                   ) : (
-                    <>
-                      <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 border-b-4 border-teal-900 transition-all active:border-b-0 active:translate-y-1">
-                        🎲 SHUFFLE (መቀላቀያ)
-                      </button>
-
-                      <button onClick={() => setIsPaused(prev => !prev)} className={"w-full py-4 rounded-xl font-black text-xl border-b-4 transition-all active:border-b-0 active:translate-y-1 " + (isPaused ? 'bg-indigo-600 hover:bg-indigo-700 border-indigo-900' : 'bg-orange-500 hover:bg-orange-600 border-orange-900')}>
-                        {isPaused ? '▶ RESUME CALLS' : '⏸ PAUSE CALLS'}
-                      </button>
-                    </>
+                    <button onClick={() => setIsPaused(prev => !prev)} className={"w-full py-6 rounded-xl font-black text-2xl border-b-4 transition-all active:border-b-0 active:translate-y-1 " + (isPaused ? 'bg-indigo-600 hover:bg-indigo-700 border-indigo-900 shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'bg-orange-500 hover:bg-orange-600 border-orange-900 shadow-[0_0_20px_rgba(249,115,22,0.4)]')}>
+                      {isPaused ? '▶ RESUME CALLS' : '⏸ PAUSE CALLS'}
+                    </button>
                   )}
+
+                  {/* Shuffle Button is now permanently under the Primary Action */}
+                  <button onClick={handleShuffle} className="w-full py-4 rounded-xl font-black text-xl bg-teal-600 hover:bg-teal-700 border-b-4 border-teal-900 transition-all active:border-b-0 active:translate-y-1">
+                    🎲 SHUFFLE (መቀላቀያ)
+                  </button>
 
                   <div className="flex gap-2 mt-2">
                     <input type="number" placeholder="Enter Card #" value={cardNumberToCheck} onChange={(e) => setCardNumberToCheck(e.target.value)} className="flex-1 bg-gray-900 border-2 border-gray-800 rounded-xl px-5 py-4 text-2xl font-black focus:border-yellow-500 outline-none transition-colors"/>
